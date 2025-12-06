@@ -1,0 +1,355 @@
+﻿using System.Text.Json;
+using Application.Common.Interfaces;
+using Application.DTOs;
+using Application.Events;
+using Application.Services;
+using AutoMapper;
+using Core.Interfaces;
+using Core.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace WebApi.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class UsersController: ControllerBase
+{
+    private readonly IUserRepository _userRepository;
+    private readonly ICurrentUserService _currentUserService;
+    private readonly IMapper _mapper;
+    private readonly IKafkaProducer _producer;
+    private readonly IConfiguration _configuration;
+    private readonly RedisService _redis;
+
+    public UsersController(IUserRepository userRepository, ICurrentUserService currentUserService, 
+        IMapper mapper, IKafkaProducer producer, IConfiguration configuration, RedisService redis)
+    {
+        _userRepository = userRepository;
+        _currentUserService = currentUserService;
+        _mapper = mapper;
+        _producer = producer;
+        _configuration = configuration;
+        _redis = redis;
+    }
+
+    [Authorize]
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetProfile()
+    {
+        if (!_currentUserService.UserId.HasValue)
+            return Unauthorized();
+
+        var user = await _userRepository.GetByIdAsync(_currentUserService.UserId.Value);
+        if (user == null)
+            return NotFound(new { message = "Пользователь не найден" });
+
+        return Ok(new
+        {
+            user.Id,
+            user.Email,
+            user.FirstName,
+            user.LastName,
+            Role = user.Role.ToString(),
+            Group = user.Group?.Name,
+            GroupId = user.GroupId
+        });
+    }
+    
+    [HttpGet("students")]
+    [Authorize(Roles = "Teacher,Administrator")]
+    public async Task<IActionResult> GetStudents([FromQuery] FilterDto query)
+    {
+        string cacheKey = $"students_{JsonSerializer.Serialize(query)}";
+        int hours = int.Parse(_configuration["Redis:Hours"] ?? "1");
+        int minutes = int.Parse(_configuration["Redis:Minutes"] ?? "5");
+        // Пытаемся взять из кэша
+        var cachedResult = await _redis.GetAsync<List<UserDto>>(cacheKey);
+        if (cachedResult != null && cachedResult.Any())
+        {
+            return Ok(cachedResult.Select(s => new
+            {
+                UserId = s.Id,
+                s.FirstName,
+                s.LastName,
+                s.Email,
+                Group = s.Group?.Name,
+                GroupId = s.GroupId
+            }));
+        }
+        // сначала пытаемся взять из кеша всех студентов
+        List<User>? students = await _redis.GetAsync<List<User>>("students");
+        if (students == null || !students.Any())
+        {
+            students = (List<User>)await _userRepository.GetUsersByRoleAsync(UserRole.Student);
+            //Кешируем результат
+            await _redis.SetAsync("students", _mapper.Map<List<UserDto>>(students), TimeSpan.FromMinutes(minutes));
+        }
+        students = (List<User>)await _userRepository.FilterAsync(_mapper.Map<FilterEntity>(query), students);
+        // Кешируем результат с фильтрацией
+        await _redis.SetAsync(cacheKey, _mapper.Map<List<UserDto>>(students), TimeSpan.FromMinutes(minutes));
+        return Ok(students.Select(s => new
+        {
+            UserId = s.Id,
+            s.FirstName,
+            s.LastName,
+            s.Email,
+            Group = s.Group?.Name,
+            GroupId = s.GroupId
+        }));
+    }
+    
+    [HttpGet("teachers")]
+    [Authorize(Roles = "Administrator, Teacher")]
+    public async Task<IActionResult> GetTeachers([FromQuery] FilterDto query)
+    {
+        string cacheKey = $"teachers_{JsonSerializer.Serialize(query)}";
+        int hours = int.Parse(_configuration["Redis:Hours"] ?? "1");
+        int minutes = int.Parse(_configuration["Redis:Minutes"] ?? "5");
+        
+        // Пытаемся взять из кэша
+        var cachedResult = await _redis.GetAsync<List<UserDto>>(cacheKey);
+        if (cachedResult != null && cachedResult.Any())
+        {
+            return Ok(cachedResult.Select(t => new
+            {
+                UserId = t.Id,
+                t.FirstName,
+                t.LastName,
+                t.Email
+            }));
+        }
+        //сначала пытаемся взять из кеша всех учителей
+        List<User>? teachers = await _redis.GetAsync<List<User>>("teachers");
+        if (teachers == null || !teachers.Any())
+        {
+            teachers = (List<User>)await _userRepository.GetUsersByRoleAsync(UserRole.Teacher);
+            //Кешируем результат
+            await _redis.SetAsync("teachers", _mapper.Map<List<UserDto>>(teachers), TimeSpan.FromMinutes(minutes));
+        }
+        teachers = (List<User>)await _userRepository.FilterAsync(_mapper.Map<FilterEntity>(query), teachers);
+        // Кешируем результат с фильтрацией
+        await _redis.SetAsync(cacheKey, _mapper.Map<List<UserDto>>(teachers), TimeSpan.FromMinutes(minutes));
+        return Ok(teachers.Select(t => new
+        {
+            UserId = t.Id,
+            t.FirstName,
+            t.LastName,
+            t.Email
+        }));
+    }
+    
+    [HttpGet("administrators")]
+    [Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> GetAdministrators([FromQuery] FilterDto query)
+    {
+        string cacheKey = $"admins_{JsonSerializer.Serialize(query)}";
+        int hours = int.Parse(_configuration["Redis:Hours"] ?? "1");
+        int minutes = int.Parse(_configuration["Redis:Minutes"] ?? "5");
+        
+        // Пытаемся взять из кэша
+        var cachedResult = await _redis.GetAsync<List<UserDto>>(cacheKey);
+        if (cachedResult != null && cachedResult.Any())
+        {
+            return Ok(cachedResult.Select(t => new
+            {
+                UserId = t.Id,
+                t.FirstName,
+                t.LastName,
+                t.Email,
+                t.ChatId
+            }));
+        }
+        //сначала пытаемся взять из кеша всех админов
+        List<User>? admins = await _redis.GetAsync<List<User>>("admins");
+        if (admins == null || !admins.Any())
+        {
+            admins = (List<User>)await _userRepository.GetUsersByRoleAsync(UserRole.Administrator);
+            //Кешируем результат
+            await _redis.SetAsync("admins", _mapper.Map<List<UserDto>>(admins), TimeSpan.FromMinutes(minutes));
+        }
+        admins = (List<User>)await _userRepository.FilterAsync(_mapper.Map<FilterEntity>(query), admins);
+        // Кешируем результат с фильтрацией
+        await _redis.SetAsync(cacheKey, _mapper.Map<List<UserDto>>(admins), TimeSpan.FromMinutes(minutes));
+        return Ok(admins.Select(t => new
+        {
+            UserId = t.Id,
+            t.FirstName,
+            t.LastName,
+            t.Email,
+            t.ChatId
+        }));
+    }
+    
+    [HttpGet("administrators-common")]
+    public async Task<IActionResult> GetAdministratorsCommon()
+    {
+        var administrators = await _userRepository.GetUsersByRoleAsync(UserRole.Administrator);
+        return Ok(administrators.Select(u => new
+        {
+            UserId = u.Id,
+            u.IsActive,
+            u.FirstName,
+            u.LastName,
+            u.Email,
+            u.ChatId,
+        }));
+    }
+    
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto updateDto)
+    {
+        if (!_currentUserService.UserId.HasValue)
+            return Unauthorized();
+
+        var user = await _userRepository.GetByIdAsync(_currentUserService.UserId.Value);
+        if (user == null)
+            return NotFound(new { message = "Пользователь не найден" });
+
+        // Проверка уникальности email
+        if (!await _userRepository.IsEmailUniqueAsync(updateDto.Email, user.Id))
+            return BadRequest(new { message = "Пользователь с таким email уже существует" });
+
+        user.FirstName = updateDto.FirstName;
+        user.LastName = updateDto.LastName;
+        user.Email = updateDto.Email;
+
+        await _userRepository.UpdateAsync(user);
+
+        return Ok(new { message = "Профиль успешно обновлен" });
+    }
+    
+    [Authorize(Roles = "Administrator")]
+    [HttpPost("{userId}/device-token")]
+    public async Task<IActionResult> UpdateDeviceToken(Guid userId, [FromBody] DeviceTokenDto tokenDto)
+    {
+        if (_currentUserService.UserId != userId && _currentUserService.Role != UserRole.Administrator)
+            return Forbid("Нет прав для обновления device token");
+
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+            return NotFound(new { message = "Пользователь не найден" });
+
+        user.DeviceToken = tokenDto.Token;
+        await _userRepository.UpdateAsync(user);
+
+        return Ok(new { message = "Device token обновлен" });
+    }
+
+    [Authorize(Roles = "Administrator")]
+    [HttpPut("{userId}/activate")]
+    public async Task<IActionResult> ActivateUser(Guid userId)
+    {
+        if (_currentUserService.UserId != userId && _currentUserService.Role != UserRole.Administrator)
+        {
+            return Unauthorized(new {message = "Нет прав для активирования", success = false});
+        }
+        
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+            return NotFound(new { message = "Пользователь не найден или уже деактивирован", success = false});
+
+        if (user.IsActive)
+        {
+            return BadRequest(new {message = "Пользователь уже активирован", success = false});
+        }
+
+        user.IsActive = true;
+        await _userRepository.UpdateAsync(user);
+        
+        //Отправляем сообщение в кафку
+        var userActivatedEvent = new UserIsActiveEvent()
+        {
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Role = user.Role.ToString(),
+            ChatId = user.ChatId ?? string.Empty,
+            IsActive = true,
+            UserId = user.Id
+        };
+        var message = JsonSerializer.Serialize(userActivatedEvent);
+        var topic = _configuration["Kafka:Topics:UserIsActive"] ?? "notifications.userIsActiveChange";
+        await _producer.ProduceAsync(topic, message);
+        
+        return Ok(new { message = "Пользователь успешно активирован", success = true});
+    }
+    
+    [Authorize(Roles = "Administrator")]
+    [HttpPut("{userId}/deactivate")]
+    public async Task<IActionResult> DeactivateUser(Guid userId)
+    {
+        if (_currentUserService.UserId != userId && _currentUserService.Role != UserRole.Administrator)
+        {
+            return Unauthorized(new {message = "Нет прав для активирования", success = false});
+        }
+        
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+            return NotFound(new { message = "Пользователь не найден или уже деактивирован", success = false});
+
+        if (!user.IsActive)
+        {
+            return BadRequest(new {message = "Пользователь уже деактивирован", success = false});
+        }
+
+        user.IsActive = false;
+        await _userRepository.UpdateAsync(user);
+        //Отправляем сообщение в кафку
+        var userActivatedEvent = new UserIsActiveEvent()
+        {
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Role = user.Role.ToString(),
+            ChatId = user.ChatId ?? string.Empty,
+            IsActive = false,
+            UserId = user.Id
+        };
+        var message = JsonSerializer.Serialize(userActivatedEvent);
+        var topic = _configuration["Kafka:Topics:UserIsActive"] ?? "notifications.userIsActiveChange";
+        await _producer.ProduceAsync(topic, message);
+        
+        return Ok(new { message = "Пользователь успешно деактивирован", success = true});
+    }
+
+    [Authorize(Roles = "Administrator")]
+    [HttpDelete("{userId}/remove")]
+    public async Task<IActionResult> DeleteUser(Guid userId)
+    {
+        if (_currentUserService.UserId != userId && _currentUserService.Role != UserRole.Administrator)
+        {
+            return Unauthorized(new {message = "Нет прав для активирования", success = false});
+        }
+        try
+        {
+            var userToDelete = await _userRepository.GetByIdAsync(userId);
+            if (userToDelete == null)
+                return NotFound(new { message = "Пользователь не найден или уже деактивирован", success = false});
+        
+            await _userRepository.DeleteAsync(userToDelete);
+        
+            //Отправляем сообщение в кафку
+            var userActivatedEvent = new UserIsActiveEvent()
+            {
+                FirstName = userToDelete.FirstName,
+                LastName = userToDelete.LastName,
+                Email = userToDelete.Email,
+                Role = userToDelete.Role.ToString(),
+                ChatId = userToDelete.ChatId ?? string.Empty,
+                IsActive = false,
+                UserId = userToDelete.Id
+            };
+            var message = JsonSerializer.Serialize(userActivatedEvent);
+            var topic = _configuration["Kafka:Topics:UserIsActive"] ?? "notifications.userIsActiveChange";
+            await _producer.ProduceAsync(topic, message);
+            
+            return Ok(new { message = "Пользователь успешно деактивирован", success = true});
+        }
+        catch
+        {
+            return StatusCode(500 ,new {Message = "Произошла внутренняя ошибка сервера", success = false});
+        }
+    }
+}

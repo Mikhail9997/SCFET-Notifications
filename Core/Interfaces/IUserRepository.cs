@@ -1,0 +1,14 @@
+﻿using System.Linq.Expressions;
+using Core.Models;
+
+namespace Core.Interfaces;
+
+public interface IUserRepository : IRepository<User>
+{
+    Task<User?> GetByEmailAsync(string email);
+    Task<IReadOnlyList<User>> GetUsersByRoleAsync(UserRole role);
+    Task<IReadOnlyList<User>> GetUsersByGroupAsync(Guid groupId);
+    Task<IReadOnlyList<User>> FilterAsync(FilterEntity query, IEnumerable<User>? users = null);
+    Task<bool> IsEmailUniqueAsync(string email, Guid? excludeUserId = null);
+    Task<bool> IsDeviceTokenUniqueAsync(string token);
+}

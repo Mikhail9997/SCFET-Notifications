@@ -1,0 +1,24 @@
+﻿using Core.Models;
+
+namespace Application.DTOs;
+
+public class NotificationDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string Type { get; set; }
+    public string SenderName { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public bool IsRead { get; set; }
+    public string? ImageUrl { get; set; } = string.Empty;
+}
+
+public class GetNotificationDto<T>
+{
+    public IReadOnlyList<T> Items { get; set; } 
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+}
