@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Application.Services;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -16,10 +17,9 @@ public class BotService
     private readonly TelegramBotClient  _botClient;
     private readonly ApiService _apiService;
     private readonly ILogger<BotService> _logger;
-    private readonly RedisCache _redis;
-    private long _botId;
+    private readonly RedisService _redis;
 
-    public BotService(string botToken, ILogger<BotService> logger, ApiService apiService, RedisCache redis)
+    public BotService(string botToken, ILogger<BotService> logger, ApiService apiService, RedisService redis)
     {
         _botClient = new TelegramBotClient(botToken);
         _logger = logger;
@@ -32,7 +32,6 @@ public class BotService
         _botClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync);
             
         var me = await _botClient.GetMe();
-        _botId = me.Id;
         _logger.LogInformation($"Bot @{me.Username} started successfully!");
     }
 
@@ -60,9 +59,6 @@ public class BotService
     {
         if (message.Text != null)
         {
-            var chatId = message.Chat.Id;
-            var userState = await _redis.GetAsync<BotUserState>($"{chatId.ToString()}-employee");
-            
             if (message.Text.StartsWith("/"))
             {
                 await HandleCommandAsync(message);

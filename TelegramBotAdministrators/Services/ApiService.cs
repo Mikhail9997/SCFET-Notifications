@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Application.Services;
 using TelegramBotAdministrators.Models;
 
 namespace TelegramBotAdministrators.Services;
@@ -22,9 +23,9 @@ public class ApiService:IApiService
 {
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
-    private readonly RedisCache _redis;
+    private readonly RedisService _redis;
 
-    public ApiService(string baseUrl, RedisCache redis)
+    public ApiService(string baseUrl, RedisService redis)
     {
         _baseUrl = baseUrl;
         _redis = redis;

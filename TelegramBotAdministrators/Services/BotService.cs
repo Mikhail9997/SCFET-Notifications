@@ -1,4 +1,5 @@
 ﻿using System.Reflection.Metadata.Ecma335;
+using Application.Services;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -14,11 +15,11 @@ public class BotService:IBotMessageSender
     private readonly TelegramBotClient  _botClient;
     private readonly ILogger<BotService> _logger;
     private readonly IApiService _apiService;
-    private readonly RedisCache _redis;
+    private readonly RedisService _redis;
     private readonly LoginHandler _loginHandler;
     private readonly GroupCreationHandler _groupCreationHandler;
     
-    public BotService(string botToken, ILogger<BotService> logger, IApiService apiService, RedisCache redis, LoginHandler loginHandler, GroupCreationHandler groupCreationHandler)
+    public BotService(string botToken, ILogger<BotService> logger, IApiService apiService, RedisService redis, LoginHandler loginHandler, GroupCreationHandler groupCreationHandler)
     {
         _botClient = new TelegramBotClient(botToken);
         _logger = logger;
@@ -173,14 +174,14 @@ public class BotService:IBotMessageSender
 
                 if (success)
                 {
-                    // Очищаем сессию
-                    await _redis.RemoveAsync(chatId.ToString());
                     await SendMessage(chatId, "✅ Вы успешно вышли из системы.");
                 }
                 else
                 {
                     await SendMessage(chatId, "❌ Произошла неизвестная ошибка");
                 }
+                // Очищаем сессию
+                await _redis.RemoveAsync(chatId.ToString());
             }
             else
             {

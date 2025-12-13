@@ -6,6 +6,7 @@ using Application.Hubs;
 using Application.Profiles;
 using Application.Services;
 using Core.Interfaces;
+using dotenv.net;
 using DotNetEnv;
 using Infrastructure;
 using Infrastructure.Repositories;
@@ -16,10 +17,27 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using StackExchange.Redis;
 
+
+var envPath = Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory())?.FullName, ".env");
+
+// Загружаем .env файл
+if (File.Exists(envPath))
+{
+    DotEnv.Load(options: new DotEnvOptions(
+        envFilePaths: new[] { envPath },
+        ignoreExceptions: false
+    ));
+}
+else
+{
+    Console.WriteLine($"Warning: .env file not found at {envPath}");
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Configuration.AddEnvironmentVariables();
+
 // Add services
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
@@ -55,8 +73,11 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Database
+var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+    options.UseNpgsql(builder.Configuration["ConnectionStrings:DefaultConnection"],
         npgsqlOptions => 
         {
             npgsqlOptions.EnableRetryOnFailure(

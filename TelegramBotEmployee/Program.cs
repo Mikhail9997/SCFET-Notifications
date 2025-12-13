@@ -1,10 +1,32 @@
 ﻿
+using Application.Services;
+using dotenv.net;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using TelegramBotEmployee.Services;
+using KafkaConsumerService = TelegramBotEmployee.Services.KafkaConsumerService;
+
+// Получаем путь к исполняемой директории
+var executionPath = AppContext.BaseDirectory;
+// Поднимаемся на 3 уровня вверх к корню проекта
+var projectPath = Directory.GetParent(executionPath)?.Parent?.Parent?.Parent?.Parent?.FullName;
+var envPath = Path.Combine(projectPath ?? executionPath, ".env");
+
+// Загружаем .env файл
+if (File.Exists(envPath))
+{
+    DotEnv.Load(options: new DotEnvOptions(
+        envFilePaths: new[] { envPath },
+        ignoreExceptions: false
+    ));
+}
+else
+{
+    Console.WriteLine($"Warning: .env file not found at {envPath}");
+}
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration((context, config) =>
@@ -23,14 +45,13 @@ var host = Host.CreateDefaultBuilder(args)
             ;
             return ConnectionMultiplexer.Connect(connectionString);
         });
-        services.AddSingleton<RedisCache>();
+        services.AddSingleton<RedisService>();
 
         services.AddSingleton<ApiService>(provider =>
         {
             var apiBaseUrl = configuration["Api:BaseUrl"]
                              ?? "http://localhost:5050";
-
-            var redis = provider.GetRequiredService<RedisCache>();
+            
             return new ApiService(apiBaseUrl);
         });
 
@@ -41,7 +62,7 @@ var host = Host.CreateDefaultBuilder(args)
 
             var apiService = provider.GetRequiredService<ApiService>();
             var logger = provider.GetRequiredService<ILogger<BotService>>();
-            var redis = provider.GetRequiredService<RedisCache>();
+            var redis = provider.GetRequiredService<RedisService>();
 
             return new BotService(botToken, logger, apiService, redis);
         });

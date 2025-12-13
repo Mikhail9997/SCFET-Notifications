@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Application.Services;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramBotAdministrators.Models;
@@ -10,10 +11,10 @@ public class LoginHandler
 {
     private readonly ILogger<LoginHandler> _logger;
     private readonly IApiService _apiService;
-    private readonly RedisCache _redis;
+    private readonly RedisService _redis;
     public Func<long,string,ReplyMarkup?,Task> SendMessage;
 
-    public LoginHandler(ILogger<LoginHandler> logger, IApiService apiService, RedisCache redis)
+    public LoginHandler(ILogger<LoginHandler> logger, IApiService apiService, RedisService redis)
     {
         _logger = logger;
         _apiService = apiService;

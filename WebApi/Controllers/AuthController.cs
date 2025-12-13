@@ -205,12 +205,12 @@ public class AuthController: ControllerBase
         }
     }
 
-    [Authorize]
+    //[Authorize]
     [HttpPut("{userId}/logout")]
     public async Task<IActionResult> Logout(Guid userId)
     {
-        if (!_currentUserService.UserId.HasValue)
-            return Unauthorized();
+        //if (!_currentUserService.UserId.HasValue)
+            //return Unauthorized();
 
         var success = await _authService.LogoutAsync(userId);
         

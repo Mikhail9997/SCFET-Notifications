@@ -1,4 +1,6 @@
 ﻿
+using Application.Services;
+using dotenv.net;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -6,6 +8,26 @@ using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using TelegramBotAdministrators.Handlers;
 using TelegramBotAdministrators.Services;
+using KafkaConsumerService = TelegramBotAdministrators.Services.KafkaConsumerService;
+
+// Получаем путь к исполняемой директории
+var executionPath = AppContext.BaseDirectory;
+// Поднимаемся на 3 уровня вверх к корню проекта
+var projectPath = Directory.GetParent(executionPath)?.Parent?.Parent?.Parent?.Parent?.FullName;
+var envPath = Path.Combine(projectPath ?? executionPath, ".env");
+
+// Загружаем .env файл
+if (File.Exists(envPath))
+{
+    DotEnv.Load(options: new DotEnvOptions(
+        envFilePaths: new[] { envPath },
+        ignoreExceptions: false
+    ));
+}
+else
+{
+    Console.WriteLine($"Warning: .env file not found at {envPath}");
+}
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration((context, config) =>
@@ -23,13 +45,13 @@ var host = Host.CreateDefaultBuilder(args)
                 ?? throw new ArgumentException("redis ConnectionStrings is not configured");;
             return ConnectionMultiplexer.Connect(connectionString);
         });
-        services.AddSingleton<RedisCache>();
+        services.AddSingleton<RedisService>();
         services.AddSingleton<IApiService, ApiService>(provider =>
         {
             var apiBaseUrl = configuration["Api:BaseUrl"] 
                              ?? "http://localhost:5050";
 
-            var redis = provider.GetRequiredService<RedisCache>();
+            var redis = provider.GetRequiredService<RedisService>();
             return new ApiService(apiBaseUrl, redis);
         });
         services.AddSingleton<LoginHandler>();
@@ -37,15 +59,12 @@ var host = Host.CreateDefaultBuilder(args)
         
         services.AddSingleton<BotService>(provider =>
         {
-            var botToken = configuration["TelegramBot:Token"] 
+            var botToken = configuration["TelegramBot:Token"]
                            ?? throw new ArgumentException("Telegram bot token is not configured");
-                        
-            var apiBaseUrl = configuration["Api:BaseUrl"] 
-                             ?? "http://localhost:5050";
 
             var apiService =  provider.GetRequiredService<IApiService>();
             var logger = provider.GetRequiredService<ILogger<BotService>>();
-            var redis = provider.GetRequiredService<RedisCache>();
+            var redis = provider.GetRequiredService<RedisService>();
             var loginHandler = provider.GetRequiredService<LoginHandler>();
             var groupCreationHandler = provider.GetRequiredService<GroupCreationHandler>();
                         
