@@ -30,7 +30,7 @@ public class ScheduledBackupService:BackgroundService
             {
                 using (var scope = _serviceProvider.CreateScope())
                 {
-                    var backupService = scope.ServiceProvider.GetRequiredService<DatabaseBackupService>();
+                    var backupService = scope.ServiceProvider.GetRequiredService<IDatabaseBackupService>();
                     
                     await backupService.CreateBackupAsync();
                     CleanupOldBackups(maxBackups);

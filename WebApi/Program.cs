@@ -6,6 +6,7 @@ using Application.Hubs;
 using Application.Profiles;
 using Application.Services;
 using Core.Interfaces;
+using Docker.DotNet;
 using dotenv.net;
 using DotNetEnv;
 using Infrastructure;
@@ -148,6 +149,15 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
     return ConnectionMultiplexer.Connect(connectionString);
 });
 
+builder.Services.AddSingleton<DockerClient>(sp =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var dockerUri = configuration["Docker:Uri"] ?? "unix:///var/run/docker.sock";
+    
+    return new DockerClientConfiguration(new Uri(dockerUri))
+        .CreateClient();
+});
+
 // Dependency Injection
 
 // Repositories
@@ -167,7 +177,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<NotificationAppService>();
 builder.Services.AddScoped<FileService>();
 builder.Services.AddSingleton<RedisService>();
-builder.Services.AddScoped<DatabaseBackupService>();
+builder.Services.AddScoped<IDatabaseBackupService,DatabaseBackupDockerService>();
 
 // Background Services
 builder.Services.AddHostedService<KafkaConsumerService>();

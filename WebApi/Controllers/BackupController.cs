@@ -7,9 +7,9 @@ namespace WebApi.Controllers;
 [Route("api/[controller]")]
 public class BackupController: ControllerBase
 {
-    private readonly DatabaseBackupService _backupService;
+    private readonly IDatabaseBackupService _backupService;
     
-    public BackupController(DatabaseBackupService backupService)
+    public BackupController(IDatabaseBackupService backupService)
     {
         _backupService = backupService;
     }

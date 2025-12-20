@@ -70,5 +70,5 @@ services:
     volumes:
     - "C:\\Users\\mkazm\\RiderProjects\\SCFET\\WebApi:/app:rw"
     - "C:\\Users\\mkazm\\RiderProjects\\SCFET:/src:rw"
-    - "C:\\Users\\mkazm\\.nuget\\packages:/home/app/.nuget/packages"
+    - "C:\\Users\\mkazm\\.nuget\\packages:/root/.nuget/packages"
     working_dir: "/app"
