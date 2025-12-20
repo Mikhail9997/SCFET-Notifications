@@ -6,7 +6,7 @@
       context: .
       dockerfile: WebApi/Dockerfile
     environment:
-        - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=scfet_notifications;Username=postgres;Password=${DB_PASSWORD}
+        - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${DB_NAME};Username=postgres;Password=${DB_PASSWORD}
         - Kafka__BootstrapServers=kafka:9092
         - Redis__ConnectionStrings=redis-cache:6379,password=${Redis_PASSWORD},abortConnect=false,connectTimeout=5000,syncTimeout=5000
         - ASPNETCORE_ENVIRONMENT=Development
@@ -104,13 +104,13 @@
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:9092 --list"]
+      test: [ "CMD-SHELL", "kafka-topics --bootstrap-server kafka:9092 --list" ]
       interval: 10s
       timeout: 10s
       retries: 10
@@ -159,4 +159,4 @@ volumes:
   redis_cache_data:
   redis_session_data:
   postgres_data:
-  kafka_data:
+  #kafka_data:

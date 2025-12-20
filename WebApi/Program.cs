@@ -86,8 +86,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 errorCodesToAdd: null);
         }));
 
-// Authentication
+// Configurations
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+builder.Services.Configure<BackupSettings>(builder.Configuration.GetSection("BackupSettings"));
+
+// Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -164,9 +167,11 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<NotificationAppService>();
 builder.Services.AddScoped<FileService>();
 builder.Services.AddSingleton<RedisService>();
+builder.Services.AddScoped<DatabaseBackupService>();
 
 // Background Services
 builder.Services.AddHostedService<KafkaConsumerService>();
+builder.Services.AddHostedService<ScheduledBackupService>();
 
 // SignalR
 builder.Services.AddSignalR();

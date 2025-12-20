@@ -74,11 +74,6 @@ public class BotService:IBotMessageSender
                 var userState = await _redis.GetAsync<BotUserState>(chatId.ToString());
                 
                 isAuthenticated = userState != null && userState.IsAuthenticated;
-                // Делаем тестовый запрос на сервер для проверки авторизации
-                if (isAuthenticated)
-                {
-                    if (!await TestUserAuthorizeAsync(chatId, userState.Token)) return;
-                }               
             }
             
             if (message.Text.StartsWith("/"))
@@ -174,14 +169,14 @@ public class BotService:IBotMessageSender
 
                 if (success)
                 {
+                    // Очищаем сессию
+                    await _redis.RemoveAsync(chatId.ToString());
                     await SendMessage(chatId, "✅ Вы успешно вышли из системы.");
                 }
                 else
                 {
                     await SendMessage(chatId, "❌ Произошла неизвестная ошибка");
                 }
-                // Очищаем сессию
-                await _redis.RemoveAsync(chatId.ToString());
             }
             else
             {

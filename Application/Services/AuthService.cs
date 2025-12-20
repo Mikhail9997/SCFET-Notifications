@@ -1,9 +1,11 @@
 ﻿using System.Text.Json;
 using Application.Common.Interfaces;
+using Application.Configurations;
 using Application.DTOs;
 using Application.Events;
 using Core.Interfaces;
 using Core.Models;
+using Microsoft.Extensions.Options;
 
 namespace Application.Services;
 
@@ -15,13 +17,14 @@ public class AuthService
     private readonly IPasswordHasher _passwordHasher;
     private readonly IKafkaProducer _kafkaProducer;
     private readonly RedisService _redis;
+    private readonly JwtSettings _jwtSettings;
 
     public AuthService(
         IUserRepository userRepository,
         IGroupRepository groupRepository,
         IJwtTokenGenerator jwtTokenGenerator,
         IPasswordHasher passwordHasher, 
-        IKafkaProducer kafkaProducer, RedisService redis)
+        IKafkaProducer kafkaProducer, RedisService redis, IOptions<JwtSettings> jwtOptions)
     {
         _userRepository = userRepository;
         _groupRepository = groupRepository;
@@ -29,6 +32,7 @@ public class AuthService
         _passwordHasher = passwordHasher;
         _kafkaProducer = kafkaProducer;
         _redis = redis;
+        _jwtSettings = jwtOptions.Value;
     }
     
     public async Task<AuthResponse<LoginResponseDto>> LoginAsync(LoginDto loginDto)
@@ -62,7 +66,8 @@ public class AuthService
             LastName = user.LastName,
             Role = user.Role.ToString(),
             GroupName = user.Group?.Name,
-            Token = _jwtTokenGenerator.GenerateToken(user)
+            Token = _jwtTokenGenerator.GenerateToken(user),
+            AuthPeriod = _jwtSettings.AccessTokenExpiryDays
         };
         return new AuthResponse<LoginResponseDto>()
         {

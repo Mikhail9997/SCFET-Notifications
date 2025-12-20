@@ -83,7 +83,7 @@ public class UsersController: ControllerBase
         {
             students = (List<User>)await _userRepository.GetUsersByRoleAsync(UserRole.Student);
             //Кешируем результат
-            await _redis.SetAsync("students", _mapper.Map<List<UserDto>>(students), TimeSpan.FromMinutes(minutes));
+            await _redis.SetAsync("students", _mapper.Map<List<UserDto>>(students), TimeSpan.FromHours(hours));
         }
         students = (List<User>)await _userRepository.FilterAsync(_mapper.Map<FilterEntity>(query), students);
         // Кешируем результат с фильтрацией
@@ -125,7 +125,7 @@ public class UsersController: ControllerBase
         {
             teachers = (List<User>)await _userRepository.GetUsersByRoleAsync(UserRole.Teacher);
             //Кешируем результат
-            await _redis.SetAsync("teachers", _mapper.Map<List<UserDto>>(teachers), TimeSpan.FromMinutes(minutes));
+            await _redis.SetAsync("teachers", _mapper.Map<List<UserDto>>(teachers), TimeSpan.FromHours(hours));
         }
         teachers = (List<User>)await _userRepository.FilterAsync(_mapper.Map<FilterEntity>(query), teachers);
         // Кешируем результат с фильтрацией
@@ -166,7 +166,7 @@ public class UsersController: ControllerBase
         {
             admins = (List<User>)await _userRepository.GetUsersByRoleAsync(UserRole.Administrator);
             //Кешируем результат
-            await _redis.SetAsync("admins", _mapper.Map<List<UserDto>>(admins), TimeSpan.FromMinutes(minutes));
+            await _redis.SetAsync("admins", _mapper.Map<List<UserDto>>(admins), TimeSpan.FromHours(hours));
         }
         admins = (List<User>)await _userRepository.FilterAsync(_mapper.Map<FilterEntity>(query), admins);
         // Кешируем результат с фильтрацией

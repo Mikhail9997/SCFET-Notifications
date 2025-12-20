@@ -97,8 +97,8 @@ public class LoginHandler
                 
                 _logger.LogInformation("Admin logged in: {Email} (ChatId: {ChatId})", data.Email, chatId);
                 userState.State = LoginState.Completed;
-                //сохраняем в redis
-                await _redis.SetAsync(chatId.ToString(), userState);
+                //сохраняем в redis до истечения срока токена валидации
+                await _redis.SetAsync(chatId.ToString(), userState, TimeSpan.FromDays(data.AuthPeriod));
             }
             else
             {

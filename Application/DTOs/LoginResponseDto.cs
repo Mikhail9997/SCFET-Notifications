@@ -12,6 +12,7 @@ public class LoginResponseDto
     public string Role { get; set; } = String.Empty;
     public string? GroupName { get; set; }
     public string Token { get; set; } = string.Empty;
+    public int AuthPeriod { get; set; }
 }
 
 public class AuthResponse<T>
