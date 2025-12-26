@@ -48,7 +48,7 @@ public class NotificationRepository : BaseRepository<Notification>, INotificatio
             .OrderByDescending(n => n.CreatedAt)
             .ToListAsync();
     }
-    
+
     public async Task<PagedResult<Notification>> GetBySenderIdAsync(Guid senderId, NotificationFilterEntity filter)
     {
         var query = _context.Notifications
@@ -90,6 +90,14 @@ public class NotificationRepository : BaseRepository<Notification>, INotificatio
         };
     }
 
+    public async Task<Notification?> GetByIdWithReceiversAsync(Guid id)
+    {
+        return await _context.Notifications
+            .Include(n => n.Sender)
+            .Include(n => n.Receivers)
+            .FirstOrDefaultAsync(n => n.Id == id);
+    }
+    
     private async Task<(IQueryable<Notification> notifications, int totalCount)> ApplyFiltersAsync(IQueryable<Notification> query,
         NotificationFilterEntity filter)
     {

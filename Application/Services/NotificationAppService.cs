@@ -1,9 +1,16 @@
 ﻿using System.Text.Json;
 using Application.Common.Interfaces;
 using Application.DTOs;
+using Application.Hubs;
 using Application.Messages.Kafka;
 using Core.Interfaces;
 using Core.Models;
+using Infrastructure;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Services;
 
@@ -13,20 +20,27 @@ public class NotificationAppService
     private readonly IUserRepository _userRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IKafkaProducer _kafkaProducer;
-    private readonly ICurrentUserService _currentUserService;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<NotificationAppService> _logger;
+    private readonly ApplicationDbContext _context;
+    private readonly IConfiguration _configuration;
 
     public NotificationAppService(
         INotificationRepository notificationRepository,
         IUserRepository userRepository,
         IGroupRepository groupRepository,
-        IKafkaProducer kafkaProducer,
-        ICurrentUserService currentUserService)
+        IKafkaProducer kafkaProducer, 
+        IServiceProvider serviceProvider, 
+        ILogger<NotificationAppService> logger, ApplicationDbContext context, IConfiguration configuration)
     {
         _notificationRepository = notificationRepository;
         _userRepository = userRepository;
         _groupRepository = groupRepository;
         _kafkaProducer = kafkaProducer;
-        _currentUserService = currentUserService;
+        _serviceProvider = serviceProvider;
+        _logger = logger;
+        _context = context;
+        _configuration = configuration;
     }
     
     public async Task SendNotificationAsync(CreateNotificationDto dto, Guid senderId, string? imageUrl = null)
@@ -81,6 +95,152 @@ public class NotificationAppService
         var messageJson = JsonSerializer.Serialize(kafkaMessage);
         await _kafkaProducer.ProduceAsync("notifications.all", messageJson);
     }
+
+    public async Task UpdateNotificationAsync(Notification notification, UpdateNotificationDto dto, Guid senderId, string? imageUrl = null)
+    {
+        var sender = await _userRepository.GetByIdAsync(senderId);
+        if (sender == null) throw new UnauthorizedAccessException("User not found");
+        
+        // Загружаем notification с получателями заново
+        var existingNotification = await _context.Notifications
+            .Include(n => n.Receivers)
+            .FirstOrDefaultAsync(n => n.Id == notification.Id);
+            
+        if (existingNotification == null)
+            throw new InvalidOperationException("Уведомление не найдено");
+        
+        // Обновляем основные поля
+        existingNotification.Title = dto.Title;
+        existingNotification.Message = dto.Message;
+        existingNotification.Type = dto.Type;
+        existingNotification.ImageUrl = imageUrl ?? existingNotification.ImageUrl;
+        
+        // Получаем новых получателей
+        var newReceivers = await GetRecipientsAsync(dto, sender.Role);
+        if (!newReceivers.Any())
+            throw new InvalidOperationException("Получатели уведомления не найдены");
+        
+        var newReceiverIds = newReceivers.Select(r => r.Id).ToHashSet();
+        
+        // Обрабатываем получателей
+        
+        // Удаляем тех, кого больше нет
+        var receiversToRemove = existingNotification.Receivers
+            .Where(r => !newReceiverIds.Contains(r.UserId))
+            .ToList();
+            
+        foreach (var receiver in receiversToRemove)
+        {
+            _context.NotificationReceivers.Remove(receiver);
+        }
+        
+        // Добавляем новых получателей
+        var existingReceiverIds = existingNotification.Receivers
+            .Select(r => r.UserId)
+            .ToHashSet();
+            
+        foreach (var userId in newReceiverIds)
+        {
+            if (!existingReceiverIds.Contains(userId))
+            {
+                var newReceiver = new NotificationReceiver
+                {
+                    NotificationId = existingNotification.Id,
+                    UserId = userId,
+                };
+                _context.NotificationReceivers.Add(newReceiver);
+            }
+        }
+        
+        // Сохраняем изменения
+        await _context.SaveChangesAsync();
+        
+        // Отправляем в Kafka если получатели изменились
+        if (receiversToRemove.Any() || newReceiverIds.Except(existingReceiverIds).Any())
+        {
+            var kafkaMessage = new NotificationKafkaMessage
+            {
+                NotificationId = existingNotification.Id,
+                Title = existingNotification.Title,
+                Message = existingNotification.Message,
+                Type = existingNotification.Type,
+                SenderName = $"{sender.FirstName} {sender.LastName}",
+                RecipientUserIds = newReceiverIds.ToList(),
+                CreatedAt = existingNotification.CreatedAt,
+                ImageUrl = existingNotification.ImageUrl
+            };
+            
+            var messageJson = JsonSerializer.Serialize(kafkaMessage);
+            await _kafkaProducer.ProduceAsync("notifications.all", messageJson);
+
+            var receiversToRemoveIds = receiversToRemove
+                .Select(r => r.UserId).ToHashSet();
+            
+            await NotifyRemovedReceiversAboutUpdate(existingNotification.Id, receiversToRemoveIds);
+        }
+        
+        // Отправляем уведомление через SignalR
+        await NotifyReceiversAboutUpdate(existingNotification.Id, existingNotification, newReceiverIds, sender);
+    }
+    
+    private async Task NotifyReceiversAboutUpdate(Guid notificationId, Notification notification, HashSet<Guid> receiverIds, User sender)
+    {
+        try
+        {
+            var hubContext = _serviceProvider.GetRequiredService<IHubContext<NotificationHub>>();
+            foreach (var receiverId in receiverIds)
+            {
+                try
+                {
+                    await hubContext.Clients.Group($"user_{receiverId}")
+                        .SendAsync("UpdateNotification", new NotificationDto
+                        {
+                            Id = notificationId,
+                            Title = notification.Title,
+                            Message = notification.Message,
+                            Type = notification.Type.ToString(),
+                            SenderName = $"{sender.FirstName} {sender.LastName}",
+                            CreatedAt = notification.CreatedAt,
+                            IsRead = false,
+                            ImageUrl = !string.IsNullOrEmpty(notification.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{notification.ImageUrl}" : null
+                        });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Failed to send updated notification to user {UserId}", receiverId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting hub context");
+        }
+    }
+
+    private async Task NotifyRemovedReceiversAboutUpdate(Guid notificationId, 
+        HashSet<Guid> receiverIds)
+    {
+        try
+        {
+            var hubContext = _serviceProvider.GetRequiredService<IHubContext<NotificationHub>>();
+            foreach (var receiverId in receiverIds)
+            {
+                try
+                {
+                    await hubContext.Clients.Group($"user_{receiverId}")
+                        .SendAsync("RemovedNotification", notificationId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Failed to send updated notification to user {UserId}", receiverId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting hub context");
+        }
+    }
     
     private async Task ValidateNotificationPermissionsAsync(UserRole senderRole, CreateNotificationDto dto)
     {
@@ -107,7 +267,7 @@ public class NotificationAppService
         // Администраторы могут отправлять сообщения кому угодно - никаких ограничений
     }
     
-    private async Task<List<User>> GetRecipientsAsync(CreateNotificationDto dto, UserRole senderRole)
+    private async Task<List<User>> GetRecipientsAsync(NotificationActionDto dto, UserRole senderRole)
     {
         if (dto.TargetUserIds != null && dto.TargetUserIds.Any())
         {

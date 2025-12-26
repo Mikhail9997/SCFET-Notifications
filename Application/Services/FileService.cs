@@ -21,8 +21,8 @@ public class FileService
         if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
             throw new ArgumentException("Invalid image format");
 
-        // Проверяем размер файла (макс 5MB)
-        if (image.Length > 5 * 1024 * 1024)
+        // Проверяем размер файла (макс 15MB)
+        if (image.Length > 15 * 1024 * 1024)
             throw new ArgumentException("Image size too large");
 
         // Создаем уникальное имя файла
@@ -50,7 +50,6 @@ public class FileService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to delete image: {ImageUrl}", imageUrl);
-            // Продолжаем удаление других файлов даже если один не удалился
         }
     }
     
@@ -83,6 +82,12 @@ public class FileService
             _logger.LogError(ex, "Error deleting file: {ImageUrl}", imageUrl);
             return false;
         }
+    }
+
+    public bool IsImagesEquals(string fileName1, string fileName2)
+    {
+        if (fileName1.Equals(fileName2)) return true;
+        return false;
     }
     
     private bool IsInAllowedDirectory(string filePath, string uploadsFolder)

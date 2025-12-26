@@ -94,6 +94,59 @@ public class NotificationsController:ControllerBase
         }
     }
     
+    [HttpPut("{id}/update")]
+    [Authorize(Roles = "Teacher,Administrator")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UpdateNotification(Guid id, [FromForm] UpdateNotificationDto request)
+    {
+        if (!_currentUserService.UserId.HasValue)
+            return Unauthorized();
+        
+        try
+        {
+            var notification = await _notificationRepository.GetByIdWithReceiversAsync(id);
+            if (notification == null) return BadRequest(new {message="Уведомление не найдено", success=false});
+            
+            string? imgUrl = null;
+            // Если изображение передается в запросе
+            if (request.Image != null)
+            {
+                // Если уведомление имеет изображение - удаляем
+                if (!string.IsNullOrEmpty(notification.ImageUrl))
+                {
+                    await _fileService.DeleteNotificationImagesAsync(notification.ImageUrl, _uploadsFolder);
+                }
+                // Добавляем новое изображение уведомлению если они не одинаковые
+                var fileName1 = request.Image.FileName;
+                var fileName2 = Path.GetFileName(notification.ImageUrl);
+                if (!_fileService.IsImagesEquals(fileName1, fileName2 ?? string.Empty))
+                {
+                    imgUrl = await _fileService.SaveImageAsync(request.Image, _uploadsFolder);
+                }
+
+            }
+
+            await _notificationService.UpdateNotificationAsync(notification, request, _currentUserService.UserId.Value, imgUrl);
+            return Ok(new { message = "Уведомление успешно обновлено", success=true});
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return BadRequest(new { message = ex.Message, success=false });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message, success=false });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message, success=false });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Внутренняя ошибка сервера", success=false });
+        }
+    }
+    
     [HttpGet("my")]
     public async Task<IActionResult> GetMyNotifications([FromQuery] NotificationFilterDto query)
     {
@@ -131,14 +184,6 @@ public class NotificationsController:ControllerBase
         if (notification == null)
             return NotFound(new { message = "Уведомление не найдено" });
 
-        // Проверяем, имеет ли пользователь доступ к этому уведомлению
-        if (!notification.Receivers.Any(r => r.UserId == _currentUserService.UserId.Value) &&
-            notification.SenderId != _currentUserService.UserId.Value &&
-            _currentUserService.Role != UserRole.Administrator)
-        {
-            return Forbid("Нет доступа к этому уведомлению");
-        }
-
         var result = new NotificationDetailDto
         {
             Id = notification.Id,
@@ -152,6 +197,7 @@ public class NotificationsController:ControllerBase
             {
                 UserId = r.UserId,
                 UserName = $"{r.User.FirstName} {r.User.LastName}",
+                Role = r.User.Role,
                 IsRead = r.IsRead
             }).ToList(),
             ImageUrl = !string.IsNullOrEmpty(notification.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{notification.ImageUrl}" : null
@@ -230,14 +276,14 @@ public class NotificationsController:ControllerBase
 
         try
         {
-            //Удаляем изображения если имеются
+            // Удаляем изображения если имеются
             if (notification.ImageUrl != null)
             {
                 await _fileService.DeleteNotificationImagesAsync(notification.ImageUrl, _uploadsFolder);
             }
             await _notificationRepository.DeleteAsync(notification);
             
-            //умедовляем получателей об удалении
+            // уведомляем получателей об удалении
             using var scope = _serviceProvider.CreateScope();
             var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<NotificationHub>>();
             var receivers = notification.Receivers.Select(r => r.UserId).ToList();

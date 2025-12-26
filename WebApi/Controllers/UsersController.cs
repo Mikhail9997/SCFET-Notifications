@@ -74,7 +74,8 @@ public class UsersController: ControllerBase
                 s.LastName,
                 s.Email,
                 Group = s.Group?.Name,
-                GroupId = s.GroupId
+                GroupId = s.GroupId,
+                Role = UserRole.Student.ToString()
             }));
         }
         // сначала пытаемся взять из кеша всех студентов
@@ -95,7 +96,8 @@ public class UsersController: ControllerBase
             s.LastName,
             s.Email,
             Group = s.Group?.Name,
-            GroupId = s.GroupId
+            GroupId = s.GroupId,
+            Role = UserRole.Student.ToString()
         }));
     }
     
@@ -116,7 +118,8 @@ public class UsersController: ControllerBase
                 UserId = t.Id,
                 t.FirstName,
                 t.LastName,
-                t.Email
+                t.Email,
+                Role = UserRole.Teacher.ToString()
             }));
         }
         //сначала пытаемся взять из кеша всех учителей
@@ -135,7 +138,8 @@ public class UsersController: ControllerBase
             UserId = t.Id,
             t.FirstName,
             t.LastName,
-            t.Email
+            t.Email,
+            Role = UserRole.Teacher.ToString()
         }));
     }
     
@@ -157,7 +161,8 @@ public class UsersController: ControllerBase
                 t.FirstName,
                 t.LastName,
                 t.Email,
-                t.ChatId
+                t.ChatId,
+                Role = UserRole.Administrator.ToString()
             }));
         }
         //сначала пытаемся взять из кеша всех админов
@@ -177,7 +182,8 @@ public class UsersController: ControllerBase
             t.FirstName,
             t.LastName,
             t.Email,
-            t.ChatId
+            t.ChatId,
+            Role = UserRole.Administrator.ToString()
         }));
     }
     
