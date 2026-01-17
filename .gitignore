@@ -5,4 +5,7 @@ riderModule.iml
 /_ReSharper.Caches/
 .env
 WebApi/Backups/
-WebApi/Notifications
+
+!WebApi/Uploads/Notifications/
+WebApi/Uploads/Notifications/*
+!WebApi/Uploads/Notifications/.gitkeep
