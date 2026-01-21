@@ -7,6 +7,7 @@
       dockerfile: WebApi/Dockerfile
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./WebApi/uploads:/app/uploads
     user: root
     environment:
         - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${DB_NAME};Username=postgres;Password=${DB_PASSWORD}
@@ -162,4 +163,5 @@ volumes:
   redis_cache_data:
   redis_session_data:
   postgres_data:
+  webapi_uploads:
   #kafka_data:

@@ -6,7 +6,9 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["TelegramBotEmployee/TelegramBotEmployee.csproj", "TelegramBotEmployee/"]
-COPY ["TelegramBot/TelegramBot.csproj", "TelegramBot/"]
+COPY ["Application/Application.csproj", "Application/"]
+COPY ["Core/Core.csproj", "Core/"]
+COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
 RUN dotnet restore "TelegramBotEmployee/TelegramBotEmployee.csproj"
 COPY . .
 WORKDIR "/src/TelegramBotEmployee"

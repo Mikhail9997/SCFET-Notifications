@@ -195,6 +195,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Создаем директорию uploads, если ее нет
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+    Console.WriteLine($"Created uploads directory at: {uploadsPath}");
+}
+
 app.UseCors("AllowAll");
 
 // Разрешаем доступ к статическим файлам

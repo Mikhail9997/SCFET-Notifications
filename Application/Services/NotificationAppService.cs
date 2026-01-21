@@ -101,7 +101,7 @@ public class NotificationAppService
         var sender = await _userRepository.GetByIdAsync(senderId);
         if (sender == null) throw new UnauthorizedAccessException("User not found");
         
-        // Загружаем notification с получателями заново
+        // Загружаем notification с получателями 
         var existingNotification = await _context.Notifications
             .Include(n => n.Receivers)
             .FirstOrDefaultAsync(n => n.Id == notification.Id);
@@ -179,7 +179,7 @@ public class NotificationAppService
             await NotifyRemovedReceiversAboutUpdate(existingNotification.Id, receiversToRemoveIds);
         }
         
-        // Отправляем уведомление через SignalR
+        // Отправляем уведомление через SignalR для тех, у кого изменилось уведомление
         await NotifyReceiversAboutUpdate(existingNotification.Id, existingNotification, newReceiverIds, sender);
     }
     

@@ -28,7 +28,7 @@
 
     <ItemGroup>
       <Folder Include="Docker\" />
-      <Folder Include="Uploads\" />
+      <Folder Include="uploads\" />
     </ItemGroup>
 
     <ItemGroup>

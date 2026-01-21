@@ -49,7 +49,7 @@ public class NotificationsController:ControllerBase
         _logger = logger;
 
         // Определяем папку для загрузок относительно корня приложения
-        _uploadsFolder = Path.Combine(_environment.ContentRootPath, "Uploads", "Notifications");
+        _uploadsFolder = Path.Combine(_environment.ContentRootPath, "uploads", "Notifications");
         
         // Создаем папку если не существует
         if (!Directory.Exists(_uploadsFolder))
