@@ -7,7 +7,9 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["TelegramBot/TelegramBot.csproj", "TelegramBot/"]
 RUN dotnet restore "TelegramBot/TelegramBot.csproj"
-COPY . .
+
+COPY ["TelegramBot/", "TelegramBot/"]
+
 WORKDIR "/src/TelegramBot"
 RUN dotnet build "TelegramBot.csproj" -c $BUILD_CONFIGURATION -o /app/build
 

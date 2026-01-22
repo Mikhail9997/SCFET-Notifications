@@ -10,7 +10,12 @@ COPY ["Application/Application.csproj", "Application/"]
 COPY ["Core/Core.csproj", "Core/"]
 COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
 RUN dotnet restore "TelegramBotEmployee/TelegramBotEmployee.csproj"
-COPY . .
+
+COPY ["TelegramBotEmployee/", "TelegramBotEmployee/"]
+COPY ["Application/", "Application/"]
+COPY ["Core/", "Core/"]
+COPY ["Infrastructure/", "Infrastructure/"]
+
 WORKDIR "/src/TelegramBotEmployee"
 RUN dotnet build "TelegramBotEmployee.csproj" -c $BUILD_CONFIGURATION -o /app/build
 

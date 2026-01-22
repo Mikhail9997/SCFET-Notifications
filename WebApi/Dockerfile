@@ -12,7 +12,12 @@ COPY ["Application/Application.csproj", "Application/"]
 COPY ["Core/Core.csproj", "Core/"]
 COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
 RUN dotnet restore "WebApi/WebApi.csproj"
-COPY . .
+
+COPY ["WebApi/", "WebApi/"]
+COPY ["Application/", "Application/"]
+COPY ["Core/", "Core/"]
+COPY ["Infrastructure/", "Infrastructure/"]
+
 WORKDIR "/src/WebApi"
 RUN dotnet build "WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
