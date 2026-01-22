@@ -6,4 +6,4 @@ riderModule.iml
 .env
 WebApi/Backups/
 
-/WebApi/Uploads/Notifications/
+WebApi/uploads/Notifications/
