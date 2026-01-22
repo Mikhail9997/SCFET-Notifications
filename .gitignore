@@ -6,6 +6,4 @@ riderModule.iml
 .env
 WebApi/Backups/
 
-!WebApi/Uploads/Notifications/
-WebApi/Uploads/Notifications/*
-!WebApi/Uploads/Notifications/.gitkeep
+/WebApi/Uploads/Notifications/
