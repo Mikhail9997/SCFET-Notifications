@@ -143,6 +143,7 @@ public class AuthService
         {
             case UserRole.Student:
                 await _redis.RemoveAsync("students");
+                await _redis.RemoveAsync("groups");
                 break;
             case UserRole.Teacher:
                 await _redis.RemoveAsync("teachers");

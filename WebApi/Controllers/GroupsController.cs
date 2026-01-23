@@ -34,7 +34,7 @@ public class GroupsController: ControllerBase
         string cacheKey = $"groups_{JsonConvert.SerializeObject(query)}";
         var minutes = int.Parse(_configuration["Redis:Minutes"] ?? "5");
         
-        // 1. Всегда проверяем кэш для конкретного запроса (с фильтром или без)
+        // Всегда проверяем кэш для конкретного запроса (с фильтром или без)
         var cachedDtos = await _redis.GetAsync<List<GroupDto>>(cacheKey);
         if (cachedDtos != null)
         {
@@ -46,7 +46,7 @@ public class GroupsController: ControllerBase
                 g.StudentCount
             }));
         }
-        // 2. Получаем группы (с фильтром или без)
+        // Получаем группы (с фильтром или без)
         List<Group> groups;
         
         if (!string.IsNullOrEmpty(query.Name))
@@ -81,10 +81,10 @@ public class GroupsController: ControllerBase
             await _redis.SetAsync(allGroupsCacheKey, allDtos, TimeSpan.FromMinutes(minutes));
         }
         
-        // 3. Маппим в DTO (AutoMapper сам подсчитает StudentCount)
+        // Маппим в DTO (AutoMapper сам подсчитает StudentCount)
         var resultDtos = _mapper.Map<List<GroupDto>>(groups);
         
-        // 4. Сохраняем в кэш для этого конкретного запроса
+        // Сохраняем в кэш для этого конкретного запроса
         await _redis.SetAsync(cacheKey, resultDtos, TimeSpan.FromMinutes(minutes));
         
         return Ok(resultDtos.Select(g => new
