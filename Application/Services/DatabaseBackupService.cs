@@ -109,6 +109,7 @@ public class DatabaseBackupDockerService : IDatabaseBackupService
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
         var backupPath = Path.Combine(backupDir, $"backup_{timestamp}.dump");
         
+        var networkName = _configuration["DOCKER_NETWORK"] ?? "scfet_network";
         try
         {
             var containerConfig = new CreateContainerParameters
@@ -123,7 +124,7 @@ public class DatabaseBackupDockerService : IDatabaseBackupService
                 },
                 HostConfig = new HostConfig
                 {
-                    NetworkMode = "scfet_default" 
+                    NetworkMode = networkName 
                 }
             };
             
