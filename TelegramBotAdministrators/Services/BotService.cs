@@ -224,7 +224,7 @@ public class BotService:IBotMessageSender
         
         switch (requestResult.Code)
         {
-            case 400:
+            case 404:
                 // если не удалось найти профиль в базе данных
                 // очищаем кеш
                 await _redis.RemoveAsync(chatId.ToString());
