@@ -41,6 +41,8 @@ services:
     build:
       context: .
       dockerfile: TelegramBot/Dockerfile
+    networks:
+      - scfet_network
     environment:
       - Kafka__BootstrapServers=kafka:9092
       - Redis__ConnectionStrings=redis-cache:6379,password=${Redis_PASSWORD},abortConnect=false,connectTimeout=5000,syncTimeout=5000
