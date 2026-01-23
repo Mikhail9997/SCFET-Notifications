@@ -9,14 +9,14 @@ namespace TelegramBotAdministrators.Services;
 public interface IApiService
 {
     Task<AuthResponse<LoginResponseDto>> LoginAsync(LoginDto loginDto);
-    Task<UserProfileDto?> GetProfileAsync(string token);
+    Task<RequestResult<UserProfileDto?>> GetProfileAsync(string token);
     Task<int> TestAuthorization(string token);
     Task<GroupCreateResponse> CreateGroup(string token, GroupDto groupDto);
     Task<List<User>> GetAdministratorsAsync();
     Task<UserActivateDto> ActivateUser(Guid userId, string token);
     Task<UserActivateDto> DeactivateUser(Guid userId, string token);
     Task<UserActivateDto> RemoveUser(Guid userId, string token);
-    Task<bool> LogoutAsync(Guid userId, string token);
+    Task<RequestResult<bool>> LogoutAsync(Guid userId, string token);
 }
 
 public class ApiService:IApiService
@@ -72,7 +72,7 @@ public class ApiService:IApiService
         }
     }
 
-    public async Task<UserProfileDto?> GetProfileAsync(string token)
+    public async Task<RequestResult<UserProfileDto?>> GetProfileAsync(string token)
     {
         AddAuthHeader(token);
         try
@@ -86,14 +86,15 @@ public class ApiService:IApiService
                     content, 
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 
-                return userProfileResult;
+                return new RequestResult<UserProfileDto?>{Data = userProfileResult, Code = (int)response.StatusCode};
             }
+            return new RequestResult<UserProfileDto?>{Data = null, Code = (int)response.StatusCode};
         }
         catch(Exception ex)
         {
             Console.WriteLine($"Error during get profile: {ex.Message}");
         }
-        return null;
+        return new RequestResult<UserProfileDto?>{Data = null, Code = 500};;
     }
 
     public async Task<int> TestAuthorization(string token)
@@ -233,20 +234,36 @@ public class ApiService:IApiService
         return new UserActivateDto() { Message = "Произошла неизвестная ошибка", Success = false};
     }
 
-    public async Task<bool> LogoutAsync(Guid userId, string token)
+    public async Task<RequestResult<bool>> LogoutAsync(Guid userId, string token)
     {
         try
         {
             AddAuthHeader(token);
             var response = await _httpClient.PutAsync($"{_baseUrl}/auth/{userId}/logout", null);
 
-            return response.IsSuccessStatusCode;
+            if (response.IsSuccessStatusCode)
+            {
+                return new RequestResult<bool>
+                {
+                    Data = true,
+                    Code = (int)response.StatusCode
+                };
+            }
+            return new RequestResult<bool>
+            {
+                Data = false,
+                Code = (int)response.StatusCode
+            };
         }
         catch(Exception ex)
         {
             Console.WriteLine($"Error during logout User: {ex.Message}");
         }
 
-        return false;
+        return new RequestResult<bool>
+        {
+            Data = false,
+            Code = 500
+        };
     }
 }

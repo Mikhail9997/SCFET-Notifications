@@ -264,6 +264,9 @@ public class UsersController: ControllerBase
         user.IsActive = true;
         await _userRepository.UpdateAsync(user);
         
+        //очищаем кеш
+        await ClearCache(user.Role);
+        
         //Отправляем сообщение в кафку
         var userActivatedEvent = new UserIsActiveEvent()
         {
@@ -302,6 +305,10 @@ public class UsersController: ControllerBase
 
         user.IsActive = false;
         await _userRepository.UpdateAsync(user);
+        
+        //очищаем кеш
+        await ClearCache(user.Role);
+        
         //Отправляем сообщение в кафку
         var userActivatedEvent = new UserIsActiveEvent()
         {
@@ -336,6 +343,9 @@ public class UsersController: ControllerBase
         
             await _userRepository.DeleteAsync(userToDelete);
         
+            //очищаем кеш
+            await ClearCache(userToDelete.Role);
+            
             //Отправляем сообщение в кафку
             var userActivatedEvent = new UserIsActiveEvent()
             {
@@ -356,6 +366,22 @@ public class UsersController: ControllerBase
         catch
         {
             return StatusCode(500 ,new {Message = "Произошла внутренняя ошибка сервера", success = false});
+        }
+    }
+
+    private async Task ClearCache(UserRole role)
+    {
+        switch (role)
+        {
+            case UserRole.Student:
+                await _redis.RemoveAsync("students");
+                break;
+            case UserRole.Teacher:
+                await _redis.RemoveAsync("teachers");
+                break;
+            case UserRole.Administrator:
+                await _redis.RemoveAsync("admins");
+                break;
         }
     }
 }

@@ -165,9 +165,9 @@ public class BotService:IBotMessageSender
             if (await _redis.ExistsAsync(chatId.ToString()))
             {
                 var currentUser = await _redis.GetAsync<BotUserState>(chatId.ToString());
-                var success = await _apiService.LogoutAsync(currentUser.UserId.Value, currentUser?.Token ?? "");
+                var requestResult = await _apiService.LogoutAsync(currentUser.UserId.Value, currentUser?.Token ?? "");
 
-                if (success)
+                if (requestResult.Data)
                 {
                     // Очищаем сессию
                     await _redis.RemoveAsync(chatId.ToString());
@@ -175,7 +175,17 @@ public class BotService:IBotMessageSender
                 }
                 else
                 {
-                    await SendMessage(chatId, "❌ Произошла неизвестная ошибка");
+                    switch (requestResult.Code)
+                    {
+                        case 400:
+                            // очищаем кеш если пользователь не найден
+                            await _redis.RemoveAsync(chatId.ToString());
+                            await SendMessage(chatId, "✅ Вы успешно вышли из системы.");
+                            break;
+                        default:
+                            await SendMessage(chatId, "❌ Произошла неизвестная ошибка");
+                            break;
+                    }
                 }
             }
             else
@@ -196,7 +206,9 @@ public class BotService:IBotMessageSender
     private async Task ShowProfile(long chatId)
     {
         var token = (await _redis.GetAsync<BotUserState>(chatId.ToString()))?.Token;
-        var userData = await _apiService.GetProfileAsync(token ?? "");
+        var requestResult = await _apiService.GetProfileAsync(token ?? "");
+        var userData = requestResult.Data;
+        // если сервер вернул данные профиля
         if (userData != null)
         {
             var profileMessage = $"👤 Ваш профиль:\n\n" +
@@ -209,7 +221,19 @@ public class BotService:IBotMessageSender
             await SendMessage(chatId, profileMessage);
             return;
         }
-        await SendMessage(chatId, "❌ Не удалось загрузить данные профиля.");
+        
+        switch (requestResult.Code)
+        {
+            case 400:
+                // если не удалось найти профиль в базе данных
+                // очищаем кеш
+                await _redis.RemoveAsync(chatId.ToString());
+                await SendMessage(chatId, "❌ Текущей учетной записи не существует.");
+                break;
+            default:
+                await SendMessage(chatId, "❌ Не удалось загрузить данные профиля.");
+                break;
+        }
     }
     
     private async Task SendNotAuthenticatedMessage(long chatId)

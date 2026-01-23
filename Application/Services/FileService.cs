@@ -34,7 +34,7 @@ public class FileService
             await image.CopyToAsync(stream);
         }
 
-        return $"/uploads/notifications/{fileName}";
+        return $"/uploads/Notifications/{fileName}";
     }
     
     public async Task DeleteNotificationImagesAsync(string imageUrl, string uploadsFolder)
