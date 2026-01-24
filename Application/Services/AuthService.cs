@@ -54,6 +54,15 @@ public class AuthService
         
         if (loginDto.ChatId != null && !string.IsNullOrEmpty(loginDto.ChatId))
         {
+            // если входит администратор через телеграм бота, то проверяем
+            // не занят ли уже этот аккаунт
+            if (user.Role == UserRole.Administrator && !string.IsNullOrEmpty(user.ChatId))
+            {
+                return new AuthResponse<LoginResponseDto>()
+                {
+                    LoginResult = LoginResult.AlreadyInUse
+                };
+            }
             user.ChatId = loginDto.ChatId;
             await _userRepository.UpdateAsync(user);
         }
@@ -283,5 +292,6 @@ public enum LoginResult
 {
     Success,
     NotActivated,
-    IncorrectData
+    IncorrectData,
+    AlreadyInUse
 }

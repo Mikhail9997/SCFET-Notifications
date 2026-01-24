@@ -106,6 +106,7 @@ public class AuthController: ControllerBase
         {
             LoginResult.IncorrectData => Unauthorized(new { message = "Неверный email или пароль", success = false }),
             LoginResult.NotActivated => Unauthorized(new { message = "аккаунт не активирован", success = false }),
+            LoginResult.AlreadyInUse => Unauthorized(new { message = "аккаунт уже используется", success = false }),
             LoginResult.Success => Ok(new {message = "Вы успешно вошли в аккаунт", data = result.Data, success = true}),
             _ => BadRequest(new { message = "неизвестная ошибка", success = false })
         };
