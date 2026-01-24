@@ -115,7 +115,7 @@ public class DatabaseBackupDockerService : IDatabaseBackupService
         {
             var containerConfig = new CreateContainerParameters
             {
-                Image = "postgres:15",
+                Image = "postgres:15-alpine",
                 Cmd = new List<string>
                 {
                     "pg_dump",
