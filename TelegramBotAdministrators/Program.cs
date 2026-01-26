@@ -45,6 +45,8 @@ var host = Host.CreateDefaultBuilder(args)
                 ?? throw new ArgumentException("redis ConnectionStrings is not configured");;
             return ConnectionMultiplexer.Connect(connectionString);
         });
+        services.AddSingleton<ITokenService, TokenService>();
+        services.AddTransient<HttpHandler>();
         services.AddSingleton<RedisService>();
         services.AddSingleton<IApiService, ApiService>(provider =>
         {
@@ -52,7 +54,8 @@ var host = Host.CreateDefaultBuilder(args)
                              ?? "http://localhost:5050";
 
             var redis = provider.GetRequiredService<RedisService>();
-            return new ApiService(apiBaseUrl, redis);
+            var httpHandler = provider.GetRequiredService<HttpHandler>();
+            return new ApiService(apiBaseUrl, redis, httpHandler);
         });
         services.AddSingleton<LoginHandler>();
         services.AddSingleton<GroupCreationHandler>();
@@ -67,8 +70,9 @@ var host = Host.CreateDefaultBuilder(args)
             var redis = provider.GetRequiredService<RedisService>();
             var loginHandler = provider.GetRequiredService<LoginHandler>();
             var groupCreationHandler = provider.GetRequiredService<GroupCreationHandler>();
+            var tokenService = provider.GetRequiredService<ITokenService>();
                         
-            return new BotService(botToken, logger, apiService, redis, loginHandler, groupCreationHandler);
+            return new BotService(botToken, logger, apiService, redis, loginHandler, groupCreationHandler, tokenService);
         });
         
         services.AddHostedService<BotWorker>();

@@ -1,8 +1,11 @@
-﻿using Core.Models;
+﻿using System.Security.Claims;
+using Core.Models;
 
 namespace Application.Common.Interfaces;
 
 public interface IJwtTokenGenerator
 {
-    string GenerateToken(User user);
+    string GenerateAccessToken(User user);
+    string GenerateRefreshToken();
+    ClaimsPrincipal? GetPrincipalFromExpiredToken(string token);
 }

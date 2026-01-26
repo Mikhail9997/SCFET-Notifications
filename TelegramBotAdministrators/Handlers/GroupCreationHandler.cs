@@ -80,7 +80,7 @@ public class GroupCreationHandler
     {
         try
         {
-            var token = state.Token ?? "";
+            var token = state.AccessToken ?? "";
             var groupState = state.GroupState;
             var groupDto = new GroupDto {Name = groupState?.Name ?? "", Description = groupState?.Description ?? ""};
             

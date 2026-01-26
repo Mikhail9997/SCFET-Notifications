@@ -1,6 +1,5 @@
 ﻿name: scfet
 services:
-  
   webapi:
     image: webapi
     build:
@@ -14,29 +13,38 @@ services:
       - ./WebApi/Backups:/app/Backups
     user: root
     environment:
-        - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${DB_NAME};Username=postgres;Password=${DB_PASSWORD}
-        - Kafka__BootstrapServers=kafka:9092
-        - Redis__ConnectionStrings=redis-cache:6379,password=${Redis_PASSWORD},abortConnect=false,connectTimeout=5000,syncTimeout=5000
-        - ASPNETCORE_ENVIRONMENT=Development
-        - ASPNETCORE_URLS=http://0.0.0.0:8080
-        - DOCKER_NETWORK=scfet_network
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${DB_NAME};Username=postgres;Password=${DB_PASSWORD}
+      - Kafka__BootstrapServers=kafka:9092
+      - Redis__ConnectionStrings=redis-cache:6379,password=${Redis_PASSWORD},abortConnect=false,connectTimeout=5000,syncTimeout=5000
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
+      - DOCKER_NETWORK=scfet_network
+      - DOTNET_GCHeapHardLimit=0x20000000 # 512 MB
+    deploy:
+      resources:
+        limits:
+          memory: 384M
     depends_on:
       postgres:
-          condition: service_healthy
+        condition: service_healthy
       kafka:
         condition: service_healthy
       redis-cache:
-          condition: service_healthy
+        condition: service_healthy
     ports:
       - "5050:8080"
     healthcheck:
-      test: ["CMD-SHELL", "timeout 1 bash -c 'echo > /dev/tcp/localhost/8080' || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "timeout 1 bash -c 'echo > /dev/tcp/localhost/8080' || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 90s
     restart: on-failure
-      
+
   telegramBot:
     image: telegrambot
     build:
@@ -49,16 +57,21 @@ services:
       - Redis__ConnectionStrings=redis-cache:6379,password=${Redis_PASSWORD},abortConnect=false,connectTimeout=5000,syncTimeout=5000
       - TelegramBot__Token=${TG_Students_TOKEN}
       - ASPNETCORE_ENVIRONMENT=Development
+      - DOTNET_GCHeapHardLimit=0x8000000 # 128 MB
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     depends_on:
       webapi:
         condition: service_healthy
     restart: on-failure
-      
+
   telegrambotadministrators:
     image: telegrambotadministrators
     build:
       context: .
-      dockerfile: TelegramBotAdministrators/Dockerfile  
+      dockerfile: TelegramBotAdministrators/Dockerfile
     networks:
       - scfet_network
     environment:
@@ -66,6 +79,11 @@ services:
       - Redis__ConnectionStrings=redis-cache:6379,password=${Redis_PASSWORD},abortConnect=false,connectTimeout=5000,syncTimeout=5000
       - TelegramBot__Token=${TG_Administartors_TOKEN}
       - ASPNETCORE_ENVIRONMENT=Development
+      - DOTNET_GCHeapHardLimit=0x8000000 # 128 MB
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     depends_on:
       webapi:
         condition: service_healthy
@@ -74,7 +92,7 @@ services:
       redis-cache:
         condition: service_healthy
     restart: on-failure
-      
+
   telegrambotemployee:
     image: telegrambotemployee
     build:
@@ -87,6 +105,11 @@ services:
       - Redis__ConnectionStrings=redis-cache:6379,password=${Redis_PASSWORD},abortConnect=false,connectTimeout=5000,syncTimeout=5000
       - TelegramBot__Token=${TG_Employee_TOKEN}
       - ASPNETCORE_ENVIRONMENT=Development
+      - DOTNET_GCHeapHardLimit=0x8000000 # 128 MB
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     depends_on:
       webapi:
         condition: service_healthy
@@ -95,7 +118,7 @@ services:
       redis-cache:
         condition: service_healthy
     restart: on-failure
-    
+
   # Zookeeper
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.0
@@ -109,7 +132,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      
+
   # Kafka
   kafka:
     image: confluentinc/cp-kafka:7.3.0
@@ -126,14 +149,19 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_HEAP_OPTS: "-Xmx384m -Xms192m"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     healthcheck:
-      test: [ "CMD-SHELL", "kafka-topics --bootstrap-server kafka:9092 --list" ]
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:9092 --list"]
       interval: 10s
       timeout: 10s
       retries: 10
       start_period: 40s
-    
-  #redis    
+
+  #redis
   redis-cache:
     image: redis:7-alpine
     command: redis-server --requirepass ${Redis_PASSWORD}
@@ -142,11 +170,11 @@ services:
     volumes:
       - redis_cache_data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-  
+
   redis-session:
     image: redis:7-alpine
     networks:
@@ -154,7 +182,7 @@ services:
     command: redis-server --requirepass sessionpassword
     volumes:
       - redis_session_data:/data
-      
+
   postgres:
     image: postgres:15-alpine
     environment:
@@ -166,7 +194,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -174,7 +202,9 @@ services:
       resources:
         limits:
           memory: 512M
-    restart: unless-stopped    
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
 
 networks:
   scfet_network:

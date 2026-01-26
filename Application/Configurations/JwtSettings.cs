@@ -6,5 +6,5 @@ public class JwtSettings
     public string Issuer { get; set; }
     public string Audience { get; set; }
     public int AccessTokenExpiryMinutes { get; set; } = 15;
-    public int AccessTokenExpiryDays { get; set; } = 7;
+    public int RefreshTokenExpiryDays  { get; set; } = 7;
 }

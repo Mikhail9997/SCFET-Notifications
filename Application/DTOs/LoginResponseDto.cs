@@ -11,7 +11,8 @@ public class LoginResponseDto
     public string LastName { get; set; } = string.Empty;
     public string Role { get; set; } = String.Empty;
     public string? GroupName { get; set; }
-    public string Token { get; set; } = string.Empty;
+    public string AccessToken { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = string.Empty;
     public int AuthPeriod { get; set; }
 }
 

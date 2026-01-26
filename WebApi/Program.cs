@@ -171,6 +171,8 @@ builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IKafkaProducer, KafkaProducer>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddSingleton<IRandomTokenGenerator, RandomTokenGenerator>();
+builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
 // Application Services
 builder.Services.AddScoped<AuthService>();
@@ -232,7 +234,8 @@ using (var scope = app.Services.CreateScope())
     {
         try
         {
-            dbContext.Database.EnsureCreated();
+            await dbContext.Database.EnsureCreatedAsync();
+            
             logger.LogInformation("Database created successfully");
             break;
         }

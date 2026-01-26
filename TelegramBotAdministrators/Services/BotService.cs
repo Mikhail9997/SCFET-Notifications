@@ -18,8 +18,9 @@ public class BotService:IBotMessageSender
     private readonly RedisService _redis;
     private readonly LoginHandler _loginHandler;
     private readonly GroupCreationHandler _groupCreationHandler;
+    private readonly ITokenService _tokenService;
     
-    public BotService(string botToken, ILogger<BotService> logger, IApiService apiService, RedisService redis, LoginHandler loginHandler, GroupCreationHandler groupCreationHandler)
+    public BotService(string botToken, ILogger<BotService> logger, IApiService apiService, RedisService redis, LoginHandler loginHandler, GroupCreationHandler groupCreationHandler, ITokenService tokenService)
     {
         _botClient = new TelegramBotClient(botToken);
         _logger = logger;
@@ -27,6 +28,7 @@ public class BotService:IBotMessageSender
         _redis = redis;
         _loginHandler = loginHandler;
         _groupCreationHandler = groupCreationHandler;
+        _tokenService = tokenService;
 
         _loginHandler.SendMessage += SendMessage;
         _groupCreationHandler.SendMessage += SendMessage;
@@ -45,6 +47,13 @@ public class BotService:IBotMessageSender
     {
         try
         {
+            long? chatId = GetChatId(update);
+
+            // Проверяем авторизацию
+            var result = await TestValidAccessTokenAsync(chatId.Value);
+            // Игнорируем запрос, если что-то не так
+            if (!result) return;
+            
             switch (update.Type)
             {
                 case UpdateType.Message:
@@ -146,7 +155,7 @@ public class BotService:IBotMessageSender
         var userState = await _redis.GetAsync<BotUserState>(chatId.ToString());
         var state = userState?.State ?? null;
         
-        //Если пользователь в процессе логина
+        // Если пользователь в процессе логина
         if (state != null && state != LoginState.Completed)
         {
             await _loginHandler.HandleTextMessageAsync(chatId, text, userState.State);
@@ -165,7 +174,7 @@ public class BotService:IBotMessageSender
             if (await _redis.ExistsAsync(chatId.ToString()))
             {
                 var currentUser = await _redis.GetAsync<BotUserState>(chatId.ToString());
-                var requestResult = await _apiService.LogoutAsync(currentUser.UserId.Value, currentUser?.Token ?? "");
+                var requestResult = await _apiService.LogoutAsync(currentUser.UserId.Value, currentUser?.AccessToken ?? "");
 
                 if (requestResult.Data)
                 {
@@ -205,7 +214,7 @@ public class BotService:IBotMessageSender
         
     private async Task ShowProfile(long chatId)
     {
-        var token = (await _redis.GetAsync<BotUserState>(chatId.ToString()))?.Token;
+        var token = (await _redis.GetAsync<BotUserState>(chatId.ToString()))?.AccessToken;
         var requestResult = await _apiService.GetProfileAsync(token ?? "");
         var userData = requestResult.Data;
         // если сервер вернул данные профиля
@@ -322,7 +331,7 @@ public class BotService:IBotMessageSender
             return;
         }
 
-        token = (await _redis.GetAsync<BotUserState>(chatId.ToString()))?.Token;
+        token = (await _redis.GetAsync<BotUserState>(chatId.ToString()))?.AccessToken;
         
         if (callbackData.StartsWith("activate_"))
         {
@@ -403,18 +412,50 @@ public class BotService:IBotMessageSender
         }
     }
 
-    private async Task<bool> TestUserAuthorizeAsync(long chatId, string token)
+    private async Task<bool> TestValidAccessTokenAsync(long chatIdLong)
     {
-        //Делаем тестовый запрос на сервер для проверки авторизации
-        var code = await _apiService.TestAuthorization(token);
-        if (code == 401) // если сервер вернул ошибку Unauthorized
+        string chatId = chatIdLong.ToString();
+        var botUserState = await _redis.GetAsync<BotUserState>(chatId);
+        
+        // Если пользователь еще не авторизован
+        if (botUserState == null || botUserState?.State == null ||botUserState?.State != LoginState.Completed)
         {
-            await SendMessage(chatId, "❌ Вы не авторизованы. Не удалось подтвердить вашу аутентификацию в системе.");
-            await LogoutUser(chatId);
+            return true;
+        }
+        if (botUserState.IsRefreshing)
+        {
+            string text = "❌ Вы делали слишком много запросов. Пожалуйста, подождите и повторите запрос позже";
+            await SendMessage(chatIdLong, text);
             return false;
         }
 
-        return true;
+        string? accessToken = botUserState?.AccessToken;
+        string? refreshToken = botUserState?.RefreshToken;
+        string? newAccessToken = await _tokenService.GetValidAccessTokenAsync(accessToken, refreshToken, chatId);
+        
+        // Если токен получен
+        if (newAccessToken != null)
+        {
+            return true;
+        }
+        
+        var botUserStateFinish = await _redis.GetAsync<BotUserState>(chatId);
+        
+        // Если не удалось обновить токены и это не связано с отсутствием интернет соединения
+        if (botUserStateFinish != null && 
+            (string.IsNullOrEmpty(botUserStateFinish.AccessToken) ||
+            string.IsNullOrEmpty(botUserStateFinish.RefreshToken)))
+        {
+            // Очищаем кеш
+            await _redis.RemoveAsync(chatId);
+            await SendMessage(chatIdLong, $"❌ Ошибка авторизации. Сессия истекла, войдите снова");
+        }
+        // Если не удалось обновить токены по причине отсутствия интернет соединения
+        else
+        {
+            await SendMessage(chatIdLong, $"❌ Отсутствует соединение с сервером");
+        }
+        return false;
     }
     
     private async Task SendStartMessage(long chatId, bool isAuthenticated)
@@ -453,6 +494,22 @@ public class BotService:IBotMessageSender
         {
             _logger.LogError(ex, "Error sending message to chat {ChatId}", chatId);
         }
+    }
+
+    private long? GetChatId(Update update)
+    {
+        long? chatId = null;
+        switch (update.Type)
+        {
+            case UpdateType.Message:
+                chatId = update?.Message?.Chat.Id;
+                break;
+            case UpdateType.CallbackQuery:
+                chatId = update?.CallbackQuery?.Message?.Chat.Id;
+                break;
+        }
+
+        return chatId;
     }
     
     private Task HandleErrorAsync(ITelegramBotClient arg1, Exception exception, CancellationToken arg3)

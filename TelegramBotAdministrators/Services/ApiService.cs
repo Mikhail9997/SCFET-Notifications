@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Application.Services;
+using TelegramBotAdministrators.Handlers;
 using TelegramBotAdministrators.Models;
 
 namespace TelegramBotAdministrators.Services;
@@ -25,8 +26,12 @@ public class ApiService:IApiService
     private readonly string _baseUrl;
     private readonly RedisService _redis;
 
-    public ApiService(string baseUrl, RedisService redis)
+    public ApiService(string baseUrl, RedisService redis, HttpHandler httpHandler)
     {
+        httpHandler.InnerHandler = new HttpClientHandler()
+        {
+            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true,
+        };
         _baseUrl = baseUrl;
         _redis = redis;
         _httpClient = new HttpClient();

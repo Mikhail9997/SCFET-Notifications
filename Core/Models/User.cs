@@ -12,7 +12,8 @@ public class User : BaseEntity
     public Group? Group { get; set; }
     public string? DeviceToken { get; set; }
     public string? ChatId { get; set; }
-    
+    public string? RefreshToken { get; set; }
+    public DateTime? RefreshTokenExpiryTime { get; set; }
     // Навигация
     public ICollection<Notification> SentNotifications { get; set; } = new List<Notification>();
     public ICollection<NotificationReceiver> ReceivedNotifications { get; set; } = new List<NotificationReceiver>();

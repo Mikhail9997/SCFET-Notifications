@@ -84,7 +84,8 @@ public class LoginHandler
             {
                 var data = authResult.Data;
                 userState.IsAuthenticated = true;
-                userState.Token = data.Token;
+                userState.AccessToken = data.AccessToken;
+                userState.RefreshToken = data.RefreshToken;
                 userState.UserId = data.UserId;
                 
                 var welcomeMessage = $"✅ Авторизация успешна!\n\n" +
@@ -97,7 +98,7 @@ public class LoginHandler
                 
                 _logger.LogInformation("Admin logged in: {Email} (ChatId: {ChatId})", data.Email, chatId);
                 userState.State = LoginState.Completed;
-                //сохраняем в redis до истечения срока токена валидации
+                // сохраняем в redis до истечения срока refresh токена валидации
                 await _redis.SetAsync(chatId.ToString(), userState, TimeSpan.FromDays(data.AuthPeriod));
             }
             else

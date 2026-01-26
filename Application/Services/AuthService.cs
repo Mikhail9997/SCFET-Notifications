@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Security.Claims;
+using System.Text.Json;
 using Application.Common.Interfaces;
 using Application.Configurations;
 using Application.DTOs;
@@ -6,6 +7,7 @@ using Application.Events;
 using Core.Interfaces;
 using Core.Models;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Application.Services;
 
@@ -52,11 +54,11 @@ public class AuthService
             };
         }
         
+        // если входит администратор через телеграм бота
         if (loginDto.ChatId != null && !string.IsNullOrEmpty(loginDto.ChatId))
         {
-            // если входит администратор через телеграм бота, то проверяем
-            // не занят ли уже этот аккаунт
-            if (user.Role == UserRole.Administrator && !string.IsNullOrEmpty(user.ChatId))
+            //проверяем не занят ли уже этот аккаунт другим пользователем
+            if (user.Role == UserRole.Administrator && !string.IsNullOrEmpty(user.ChatId) && user.ChatId != loginDto.ChatId)
             {
                 return new AuthResponse<LoginResponseDto>()
                 {
@@ -64,8 +66,16 @@ public class AuthService
                 };
             }
             user.ChatId = loginDto.ChatId;
-            await _userRepository.UpdateAsync(user);
         }
+        
+        // Генерация токенов
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
+        var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
+        
+        // Сохранение refresh токена
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays);
+        await _userRepository.UpdateAsync(user);
         
         var authResponseDto = new LoginResponseDto
         {
@@ -75,8 +85,9 @@ public class AuthService
             LastName = user.LastName,
             Role = user.Role.ToString(),
             GroupName = user.Group?.Name,
-            Token = _jwtTokenGenerator.GenerateToken(user),
-            AuthPeriod = _jwtSettings.AccessTokenExpiryDays
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            AuthPeriod = _jwtSettings.RefreshTokenExpiryDays
         };
         return new AuthResponse<LoginResponseDto>()
         {
@@ -260,12 +271,56 @@ public class AuthService
         return false;
     }
 
+    public async Task<TokenDto> RefreshTokenAsync(string accessToken, string refreshToken)
+    {
+        var principal = _jwtTokenGenerator.GetPrincipalFromExpiredToken(accessToken);
+        if (principal == null)
+            throw new SecurityTokenException("Invalid access token");
+
+        var userId = principal.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value;
+        var user = await _userRepository.GetByIdAsync(Guid.Parse(userId));
+
+        if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+            throw new SecurityTokenException("Invalid refresh token");
+
+        // Генерация новых токенов
+        var newAccessToken = _jwtTokenGenerator.GenerateAccessToken(user);
+        var newRefreshToken = _jwtTokenGenerator.GenerateRefreshToken();
+        
+        // Обновление refresh токена
+        user.RefreshToken = newRefreshToken;
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays);
+        await _userRepository.UpdateAsync(user);
+
+        return new TokenDto
+        {
+            AccessToken = newAccessToken,
+            RefreshToken = newRefreshToken,
+            ExpiresIn = _jwtSettings.RefreshTokenExpiryDays
+        };
+    }
+
+    public async Task RevokeRefreshTokenAsync(Guid userId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user != null)
+        {
+            user.RefreshToken = null;
+            user.RefreshTokenExpiryTime = null;
+            await _userRepository.UpdateAsync(user);
+        }
+    }
+    
     public async Task<bool> LogoutAsync(Guid userId)
     {
         var user = await _userRepository.GetByIdAsync(userId);
 
         if (user == null) return false;
 
+        // Отзываем refresh токен
+        user.RefreshToken = null;
+        user.RefreshTokenExpiryTime = null;
+        
         if (user.ChatId != null || !string.IsNullOrEmpty(user.ChatId))
         {
             user.ChatId = null;

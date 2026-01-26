@@ -54,11 +54,12 @@ public class ScheduledBackupService:BackgroundService
             return;
 
         var backups = Directory.GetFiles(backupDir)
+            .Where(f => !f.EndsWith(".gitkeep", StringComparison.OrdinalIgnoreCase))
             .Select(f => new FileInfo(f))
             .OrderByDescending(f => f.CreationTime)
             .ToList();
 
-        if (backups.Count > 0)
+        if (backups.Count > maxBackups)
         {
             foreach (var oldBackup in backups.Skip(maxBackups))
             {

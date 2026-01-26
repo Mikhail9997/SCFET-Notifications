@@ -5,6 +5,7 @@ using Application.Services;
 using Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 
 namespace WebApi.Controllers;
 
@@ -219,5 +220,30 @@ public class AuthController: ControllerBase
             return BadRequest(new { message = "Пользователь не найден" });
 
         return Ok(new { message = "Успешно" });
+    }
+    
+    [HttpPost("refresh-token")]
+    public async Task<ActionResult<TokenDto>> RefreshToken([FromBody] RefreshTokenRequestDto request)
+    {
+        try
+        {
+            var result = await _authService.RefreshTokenAsync(request.AccessToken, request.RefreshToken);
+            return Ok(result);
+        }
+        catch (SecurityTokenException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+    
+    [HttpPost("revoke-token")]
+    [Authorize]
+    public async Task<IActionResult> RevokeToken()
+    {
+        if (!_currentUserService.UserId.HasValue)
+            return Unauthorized();
+
+        await _authService.RevokeRefreshTokenAsync(_currentUserService.UserId.Value);
+        return Ok(new { message = "Token revoked successfully" });
     }
 }
