@@ -202,8 +202,6 @@ services:
       resources:
         limits:
           memory: 512M
-    ports:
-      - "5433:5432"
     restart: unless-stopped
 
 networks:
