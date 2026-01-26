@@ -157,7 +157,7 @@ public class TokenService : ITokenService
         }
     }
 
-    public async Task SaveAsync(BotUserState? botUserState, TokenData? tokenData, string chatId)
+    public async Task SaveAsync(BotUserState botUserState, TokenData? tokenData, string chatId)
     {
         if (tokenData != null)
         {
@@ -167,15 +167,17 @@ public class TokenService : ITokenService
             botUserState.RefreshToken = tokenData.RefreshToken;
             botUserState.IsRefreshing = false;
             await _redis.SetAsync(chatId, botUserState, TimeSpan.FromDays(expiresIn));
+            return;
         }
-        // Если не удалось обновить токены и это связано с отсутствием интернет соединения или ошибки сервера
-        // Убираем refresh ожидание
-        else if (botUserState != null && 
-                 (!string.IsNullOrEmpty(botUserState.AccessToken) ||
-                  !string.IsNullOrEmpty(botUserState.RefreshToken)))
+        // Если не удалось обновить токены и это связано с отсутствием интернет соединения
+        // или отсутствием соединения с сервером отменяем refresh ожидание
+        var botUserStateEdit = await _redis.GetAsync<BotUserState>(chatId);
+        if (botUserStateEdit != null && 
+                 (!string.IsNullOrEmpty(botUserStateEdit.AccessToken) ||
+                  !string.IsNullOrEmpty(botUserStateEdit.RefreshToken)))
         {
-            botUserState.IsRefreshing = false;
-            await _redis.SetAsync(chatId, botUserState);
+            botUserStateEdit.IsRefreshing = false;
+            await _redis.SetAsync(chatId, botUserStateEdit);
         }
     }
 
