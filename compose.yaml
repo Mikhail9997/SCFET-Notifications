@@ -184,11 +184,14 @@ services:
       - redis_session_data:/data
 
   postgres:
-    image: postgres:15-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=ru_RU.UTF-8'
     networks:
       - scfet_network
     volumes:

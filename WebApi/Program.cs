@@ -179,7 +179,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<NotificationAppService>();
 builder.Services.AddScoped<FileService>();
 builder.Services.AddSingleton<RedisService>();
-builder.Services.AddScoped<IDatabaseBackupService,DatabaseBackupDockerService>();
+builder.Services.AddScoped<IDatabaseBackupService, DockerSdkBackupService>();
 
 // Background Services
 builder.Services.AddHostedService<KafkaConsumerService>();
