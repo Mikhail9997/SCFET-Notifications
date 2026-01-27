@@ -13,252 +13,7 @@ public interface IDatabaseBackupService
     Task<string> CreateBackupAsync();
 }
 
-public class DatabaseBackupService:IDatabaseBackupService
-{
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<DatabaseBackupService> _logger;
-    
-    public DatabaseBackupService(IConfiguration configuration, ILogger<DatabaseBackupService> logger)
-    {
-        _configuration = configuration;
-        _logger = logger;
-    }
-
-    public async Task<string> CreateBackupAsync()
-    {
-        var connectionString = _configuration.GetConnectionString("DefaultConnection");
-        var connectionStringBuilder = new NpgsqlConnectionStringBuilder(connectionString);
-
-        var backupDir = Path.Combine(Directory.GetCurrentDirectory(), "Backups");
-        if (!Directory.Exists(backupDir))
-        {
-            Directory.CreateDirectory(backupDir);
-        }
-        
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var backupPath = Path.Combine(backupDir, $"backup_{timestamp}.sql");
-        
-        string pgDumpPath = "pg_dump";
-        
-        var arguments = $"-h {connectionStringBuilder.Host} " +
-                        $"-p {connectionStringBuilder.Port} " +
-                        $"-U {connectionStringBuilder.Username} " +
-                        $"-d {connectionStringBuilder.Database} " +
-                        $"-F c " + 
-                        $"-f \"{backupPath}\"";
-        
-        try
-        {
-            using var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = pgDumpPath,
-                    Arguments = arguments,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    EnvironmentVariables = { ["PGPASSWORD"] = connectionStringBuilder.Password }
-                }
-            };
-            
-            process.Start();
-            await process.WaitForExitAsync();
-            
-            if (process.ExitCode == 0)
-            {
-                _logger.LogInformation($"Backup created successfully: {backupPath}");
-                return backupPath;
-            }
-            else
-            {
-                var error = await process.StandardError.ReadToEndAsync();
-                throw new Exception($"Backup failed: {error}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Backup creation failed");
-            throw;
-        }
-    }
-}
-
-public class DatabaseBackupDockerService : IDatabaseBackupService
-{
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<DatabaseBackupService> _logger;
-    private readonly DockerClient _dockerClient;
-    
-    public DatabaseBackupDockerService(IConfiguration configuration, ILogger<DatabaseBackupService> logger, DockerClient dockerClient)
-    {
-        _configuration = configuration;
-        _logger = logger;
-        _dockerClient = dockerClient;
-    }
-    
-    public async Task<string> CreateBackupAsync()
-    {
-         var connectionString = _configuration.GetConnectionString("DefaultConnection");
-        var connectionStringBuilder = new NpgsqlConnectionStringBuilder(connectionString);
-        
-        var backupDir = Path.Combine(Directory.GetCurrentDirectory(), "Backups");
-        if (!Directory.Exists(backupDir))
-            Directory.CreateDirectory(backupDir);
-        
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var backupPath = Path.Combine(backupDir, $"backup_{timestamp}.dump");
-        
-        var networkName = _configuration["DOCKER_NETWORK"] ?? "scfet_network";
-        try
-        {
-            var containerConfig = new CreateContainerParameters
-            {
-                Image = "postgres:15-alpine",
-                Cmd = new List<string>
-                {
-                    "pg_dump",
-                    $"--dbname=postgresql://{connectionStringBuilder.Username}:{connectionStringBuilder.Password}@postgres:5432/{connectionStringBuilder.Database}",
-                    "--format=c",
-                    "--file=/backup.dump"
-                },
-                HostConfig = new HostConfig
-                {
-                    NetworkMode = networkName 
-                }
-            };
-            
-            // Создаем временный контейнер
-            var container = await _dockerClient.Containers.CreateContainerAsync(containerConfig);
-            
-            // Запускаем контейнер
-            var started = await _dockerClient.Containers.StartContainerAsync(
-                container.ID,
-                new ContainerStartParameters());
-            
-            if (!started)
-            {
-                throw new Exception("Failed to start backup container");
-            }
-            
-            // Ждем завершения
-            await Task.Delay(TimeSpan.FromSeconds(10));
-            
-            // Копируем файл из контейнера
-            var stream = await _dockerClient.Containers.GetArchiveFromContainerAsync(
-                container.ID,
-                new GetArchiveFromContainerParameters { Path = "/backup.dump" },
-                false);
-            using (var file = File.Create(backupPath))
-            {
-                await stream.Stream.CopyToAsync(file);
-            }
-
-            // Удаляем контейнер
-            await _dockerClient.Containers.RemoveContainerAsync(
-                container.ID,
-                new ContainerRemoveParameters { Force = true });
-            
-            _logger.LogInformation($"Backup created: {backupPath}");
-            return backupPath;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Backup creation failed");
-            throw;
-        }
-    }
-}
-
-public class SimpleDatabaseBackupService : IDatabaseBackupService
-{
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<SimpleDatabaseBackupService> _logger;
-    
-    public SimpleDatabaseBackupService(IConfiguration configuration, ILogger<SimpleDatabaseBackupService> logger)
-    {
-        _configuration = configuration;
-        _logger = logger;
-    }
-    
-    public async Task<string> CreateBackupAsync()
-    {
-        var connectionString = _configuration.GetConnectionString("DefaultConnection");
-        
-        var backupDir = Path.Combine(Directory.GetCurrentDirectory(), "Backups");
-        if (!Directory.Exists(backupDir))
-            Directory.CreateDirectory(backupDir);
-        
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var backupPath = Path.Combine(backupDir, $"backup_{timestamp}.sql");
-        
-        try
-        {
-            _logger.LogInformation("Creating database backup...");
-            
-            // Используем pg_dump через локальный вызов
-            await CreateBackupUsingPgDump(connectionString, backupPath);
-            
-            var fileInfo = new FileInfo(backupPath);
-            _logger.LogInformation($"Backup created: {backupPath} ({fileInfo.Length} bytes)");
-            
-            return backupPath;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Backup failed");
-            throw;
-        }
-    }
-
-    private async Task CreateBackupUsingPgDump(string connectionString, string backupPath)
-    {
-        // Разбираем строку подключения
-        var builder = new NpgsqlConnectionStringBuilder(connectionString);
-        
-        // Формируем команду для docker exec
-        var dumpCommand = $"pg_dump --host={builder.Host} --port={builder.Port} " +
-                          $"--username={builder.Username} --dbname={builder.Database} " +
-                          $"--clean --create --format=p";
-        
-        // Выполняем через docker exec
-        var processInfo = new ProcessStartInfo
-        {
-            FileName = "docker",
-            Arguments = $"exec scfet-postgres-1 sh -c \"PGPASSWORD='{builder.Password}' {dumpCommand}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-        
-        using var process = Process.Start(processInfo);
-        if (process == null)
-            throw new Exception("Failed to start pg_dump process");
-        
-        // Читаем вывод и пишем в файл
-        using var fileStream = File.Create(backupPath);
-        using var writer = new StreamWriter(fileStream);
-        
-        // Асинхронно пишем stdout в файл
-        var writeTask = process.StandardOutput.BaseStream.CopyToAsync(fileStream);
-        
-        // Читаем stderr для логов
-        var errorTask = process.StandardError.ReadToEndAsync();
-        
-        // Ждем завершения
-        await process.WaitForExitAsync();
-        await writeTask;
-        
-        if (process.ExitCode != 0)
-        {
-            var error = await errorTask;
-            throw new Exception($"pg_dump failed (exit code: {process.ExitCode}): {error}");
-        }
-    }
-}
-
-public class DockerSdkBackupService : IDatabaseBackupService
+public class DockerSdkBackupService: IDatabaseBackupService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<DockerSdkBackupService> _logger;
@@ -362,3 +117,137 @@ public class DockerSdkBackupService : IDatabaseBackupService
         }
     }
 }
+
+public class DockerBackupUniversalService : IDatabaseBackupService
+{
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<DockerBackupUniversalService> _logger;
+    private readonly DockerClient _dockerClient;
+
+    public DockerBackupUniversalService(IConfiguration configuration, ILogger<DockerBackupUniversalService> logger, DockerClient dockerClient)
+    {
+        _configuration = configuration;
+        _logger = logger;
+        _dockerClient = dockerClient;
+    }
+
+    public async Task<string> CreateBackupAsync()
+    {
+        var connectionString = _configuration.GetConnectionString("DefaultConnection");
+        var builder = new NpgsqlConnectionStringBuilder(connectionString);
+        
+        var backupDir = Path.Combine(Directory.GetCurrentDirectory(), "Backups");
+        Directory.CreateDirectory(backupDir);
+        
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var backupPath = Path.Combine(backupDir, $"backup_{timestamp}.sql");
+        
+        try
+        {
+            _logger.LogInformation($"Starting backup for database: {builder.Database}");
+            
+            // 1. Получаем все контейнеры
+            var containers = await _dockerClient.Containers.ListContainersAsync(
+                new ContainersListParameters { All = true });
+            
+            // Ищем контейнер с PostgreSQL
+            var postgresContainer = containers.FirstOrDefault(c => 
+                c.Names != null && 
+                c.Names.Any(n => n.Contains("postgres")) && 
+                c.State == "running");
+            
+            if (postgresContainer == null)
+            {
+                // Логируем все контейнеры для отладки
+                _logger.LogInformation("Available containers:");
+                foreach (var container in containers)
+                {
+                    _logger.LogInformation($"- {string.Join(",", container.Names)} (State: {container.State})");
+                }
+                throw new Exception("PostgreSQL container not found or not running");
+            }
+            
+            _logger.LogInformation($"Found PostgreSQL container: {postgresContainer.ID}");
+            
+            // 2. Создаем команду для выполнения pg_dump
+            var execCreate = new ContainerExecCreateParameters
+            {
+                Cmd = new List<string> 
+                { 
+                    "bash", 
+                    "-c", 
+                    $"PGPASSWORD='{builder.Password}' pg_dump " +
+                    $"-h localhost " +
+                    $"-p 5432 " +
+                    $"-U {builder.Username} " +
+                    $"-d {builder.Database} " +
+                    "--clean --create --inserts 2>&1"
+                },
+                AttachStdout = true,
+                AttachStderr = true,
+                AttachStdin = false,
+                Tty = false,
+                User = "postgres"
+            };
+            
+            var exec = await _dockerClient.Exec.ExecCreateContainerAsync(
+                postgresContainer.ID, 
+                execCreate,
+                CancellationToken.None);
+            
+            _logger.LogInformation($"Created exec instance: {exec.ID}");
+            
+            string stdout, stderr;
+            
+            // 3. Запускаем выполнение
+            using (var stream = await _dockerClient.Exec.StartAndAttachContainerExecAsync(
+                exec.ID, 
+                false, 
+                CancellationToken.None))
+            {
+                var result = await stream.ReadOutputToEndAsync(CancellationToken.None);
+                stdout = result.stdout;
+                stderr = result.stderr;
+            }
+            
+            // 4. Проверяем результат выполнения
+            var inspect = await _dockerClient.Exec.InspectContainerExecAsync(exec.ID, CancellationToken.None);
+            _logger.LogInformation($"Command exit code: {inspect.ExitCode}");
+            
+            if (inspect.ExitCode != 0)
+            {
+                throw new Exception($"pg_dump failed with exit code {inspect.ExitCode}. Stderr: {stderr}");
+            }
+            
+            if (!string.IsNullOrEmpty(stderr))
+            {
+                _logger.LogWarning($"pg_dump warnings: {stderr}");
+            }
+            
+            if (string.IsNullOrEmpty(stdout))
+            {
+                throw new Exception("pg_dump produced empty output");
+            }
+            
+            // 5. Сохраняем результат в файл
+            await File.WriteAllTextAsync(backupPath, stdout);
+            
+            // 6. Проверяем размер файла
+            var fileInfo = new FileInfo(backupPath);
+            if (fileInfo.Length == 0)
+            {
+                throw new Exception($"Backup file is empty: {backupPath}");
+            }
+            
+            _logger.LogInformation($"Backup created successfully: {backupPath} ({fileInfo.Length} bytes)");
+            
+            return backupPath;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Backup creation failed");
+            throw;
+        }
+    }
+}
+
