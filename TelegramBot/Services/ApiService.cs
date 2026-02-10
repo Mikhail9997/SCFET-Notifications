@@ -44,7 +44,7 @@ public class ApiService
             var json = JsonConvert.SerializeObject(request);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync($"{_baseUrl}/api/auth/register", content);
+            var response = await _httpClient.PostAsync($"{_baseUrl}/auth/register", content);
             if (response.IsSuccessStatusCode)
             {
                 return RegistrationResult.Success;
@@ -79,7 +79,7 @@ public class ApiService
     {
         try
         {
-            var response = await _httpClient.GetAsync($"{_baseUrl}/api/auth/check-email-exist/{email}");
+            var response = await _httpClient.GetAsync($"{_baseUrl}/auth/check-email-exist/{email}");
 
             if (response.IsSuccessStatusCode)
             {

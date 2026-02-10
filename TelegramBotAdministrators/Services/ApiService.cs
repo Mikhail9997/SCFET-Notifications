@@ -135,7 +135,7 @@ public class ApiService:IApiService
         }
         catch(Exception ex)
         {
-            Console.WriteLine($"Remove group error: {ex.Message}");
+            Console.WriteLine($"Create group error: {ex.Message}");
         }
 
         return new GroupCreateOrRemoveResponse{Message = "Произошла неизвестная ошибка. Попробуйте снова", Success = false};
@@ -159,7 +159,7 @@ public class ApiService:IApiService
         }
         catch(Exception ex)
         {
-            Console.WriteLine($"Create group error: {ex.Message}");
+            Console.WriteLine($"Remove group error: {ex.Message}");
         }
 
         return new GroupCreateOrRemoveResponse{Message = "Произошла неизвестная ошибка. Попробуйте снова", Success = false};
