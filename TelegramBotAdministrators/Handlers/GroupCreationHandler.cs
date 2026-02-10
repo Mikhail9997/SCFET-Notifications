@@ -42,9 +42,6 @@ public class GroupCreationHandler
             case GroupCreationState.WaitingForName:
                 await ProcessGroupNameAsync(chatId, text);
                 break;
-            case GroupCreationState.WaitingForDescription:
-                await ProcessGroupDescriptionAsync(chatId, text);
-                break;
             case GroupCreationState.Completed:
                 await SendMessage.Invoke(chatId, "я тебя не понимаю", null);
                 break;
@@ -58,21 +55,10 @@ public class GroupCreationHandler
     {
         var userState = await _redis.GetAsync<BotUserState>(chatId.ToString());
         userState.GroupState.Name = name;
-        userState.GroupState.State = GroupCreationState.WaitingForDescription;
-        
-        await _redis.SetAsync(chatId.ToString(), userState);
-        await SendMessage.Invoke(chatId, "✅ Название группы принято!", null);
-        await SendMessage.Invoke(chatId, "📧 Введите описание группы:", null);
-    }
-    
-    private async Task ProcessGroupDescriptionAsync(long chatId, string description)
-    {
-        var userState = await _redis.GetAsync<BotUserState>(chatId.ToString());
-        userState.GroupState.Description = description;
         userState.GroupState.State = GroupCreationState.Completed;
         
         await _redis.SetAsync(chatId.ToString(), userState);
-        await SendMessage.Invoke(chatId, "✅ Описание группы принято!", null);
+        await SendMessage.Invoke(chatId, "✅ Название группы принято!", null);
         await ProcessGroupCreationAsync(chatId, userState);
     }
     
@@ -82,7 +68,7 @@ public class GroupCreationHandler
         {
             var token = state.AccessToken ?? "";
             var groupState = state.GroupState;
-            var groupDto = new GroupDto {Name = groupState?.Name ?? "", Description = groupState?.Description ?? ""};
+            var groupDto = new GroupDto {Name = groupState?.Name ?? ""};
             
             // Выполняем запрос на сервер
             var response = await _apiService.CreateGroup(token, groupDto);

@@ -36,7 +36,6 @@ namespace Infrastructure;
                 { 
                     Id = Guid.Parse("3a6b8c9d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"),
                     Name = "ИТ-21",
-                    Description = "Группа информационных технологий 2021",
                     CreatedAt = seedDate,
                     UpdatedAt = null
                 },
@@ -44,7 +43,6 @@ namespace Infrastructure;
                 { 
                     Id = Guid.Parse("5d4c3b2a-1f0e-9d8c-7b6a-5f4e3d2c1b0a"),
                     Name = "БУ-21", 
-                    Description = "Группа бухгалтеров 2021",
                     CreatedAt = seedDate,
                     UpdatedAt = null
                 },
@@ -52,7 +50,6 @@ namespace Infrastructure;
                 { 
                     Id = Guid.Parse("9e8f7a6b-5c4d-3e2f-1a0b-9c8d7e6f5a4b"),
                     Name = "ИТ-22",
-                    Description = "Группа информационных технологий 2022",
                     CreatedAt = seedDate,
                     UpdatedAt = null
                 },
@@ -60,7 +57,6 @@ namespace Infrastructure;
                 { 
                     Id = Guid.Parse("b0a1c2d3-e4f5-6a7b-8c9d-e0f1a2b3c4d5"),
                     Name = "Исип22/1",
-                    Description = "Группа информационных технологий 2022",
                     CreatedAt = seedDate,
                     UpdatedAt = null
                 }

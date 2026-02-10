@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Application.Common.Interfaces;
 using Application.DTOs;
+using Application.Exceptions;
 using Application.Hubs;
 using Application.Messages.Kafka;
 using Core.Interfaces;
@@ -282,6 +283,8 @@ public class NotificationAppService
 
         if (dto.TargetGroupId.HasValue)
         {
+            var group = await _groupRepository.GetByIdAsync(dto.TargetGroupId.Value);
+            if (group == null) throw new GroupNotFoundException("Группа не найдена");
             return (await _userRepository.GetUsersByGroupAsync(dto.TargetGroupId.Value)).ToList();
         }
 

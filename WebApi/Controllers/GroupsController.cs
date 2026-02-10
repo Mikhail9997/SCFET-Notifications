@@ -32,7 +32,8 @@ public class GroupsController: ControllerBase
     public async Task<IActionResult> GetAllGroups([FromQuery] GroupFilterDto query)
     {
         string cacheKey = $"groups_{JsonConvert.SerializeObject(query)}";
-        var minutes = int.Parse(_configuration["Redis:Minutes"] ?? "5");
+        var minutes = int.Parse(_configuration["Redis:Group:Minutes"] ?? "1");
+        int hours = int.Parse(_configuration["Redis:Group:Hours"] ?? "1");
         
         // Всегда проверяем кэш для конкретного запроса (с фильтром или без)
         var cachedDtos = await _redis.GetAsync<List<GroupDto>>(cacheKey);
@@ -42,7 +43,6 @@ public class GroupsController: ControllerBase
             {
                 g.Id,
                 g.Name,
-                g.Description,
                 g.StudentCount
             }));
         }
@@ -68,7 +68,6 @@ public class GroupsController: ControllerBase
                 {
                     g.Id,
                     g.Name,
-                    g.Description,
                     g.StudentCount
                 }));
             }
@@ -78,10 +77,10 @@ public class GroupsController: ControllerBase
             
             // Сохраняем все группы в кэш
             var allDtos = _mapper.Map<List<GroupDto>>(groups);
-            await _redis.SetAsync(allGroupsCacheKey, allDtos, TimeSpan.FromMinutes(minutes));
+            await _redis.SetAsync(allGroupsCacheKey, allDtos, TimeSpan.FromMinutes(hours));
         }
         
-        // Маппим в DTO (AutoMapper сам подсчитает StudentCount)
+        // Маппим в DTO
         var resultDtos = _mapper.Map<List<GroupDto>>(groups);
         
         // Сохраняем в кэш для этого конкретного запроса
@@ -91,7 +90,6 @@ public class GroupsController: ControllerBase
         {
             g.Id,
             g.Name,
-            g.Description,
             g.StudentCount
         }));
     }
@@ -107,7 +105,6 @@ public class GroupsController: ControllerBase
         {
             group.Id,
             group.Name,
-            group.Description,
             Students = group.Students.Select(s => new
             {
                 s.Id,
@@ -128,8 +125,7 @@ public class GroupsController: ControllerBase
 
         var group = new Group
         {
-            Name = createDto.Name,
-            Description = createDto.Description
+            Name = createDto.Name
         };
 
         await _groupRepository.AddAsync(group);
@@ -151,7 +147,6 @@ public class GroupsController: ControllerBase
             return BadRequest(new { message = "Группа с таким названием уже существует" });
 
         group.Name = updateDto.Name;
-        group.Description = updateDto.Description;
 
         await _groupRepository.UpdateAsync(group);
 
@@ -164,14 +159,14 @@ public class GroupsController: ControllerBase
     {
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null)
-            return NotFound(new { message = "Группа не найдена" });
+            return NotFound(new { message = "Группа не найдена", success = false});
 
         if (group.Students.Any())
-            return BadRequest(new { message = "Невозможно удалить группу с привязанными студентами" });
+            return BadRequest(new { message = "Невозможно удалить группу с привязанными студентами", success = false});
 
         await _groupRepository.DeleteAsync(group);
         await _redis.RemoveAsync("groups");
 
-        return Ok(new { message = "Группа успешно удалена" });
+        return Ok(new { message = "Группа успешно удалена", success = true});
     }
 }

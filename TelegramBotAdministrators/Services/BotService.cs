@@ -19,8 +19,9 @@ public class BotService:IBotMessageSender
     private readonly LoginHandler _loginHandler;
     private readonly GroupCreationHandler _groupCreationHandler;
     private readonly ITokenService _tokenService;
+    private readonly GroupRemovingHandler _groupRemovingHandler;
     
-    public BotService(string botToken, ILogger<BotService> logger, IApiService apiService, RedisService redis, LoginHandler loginHandler, GroupCreationHandler groupCreationHandler, ITokenService tokenService)
+    public BotService(string botToken, ILogger<BotService> logger, IApiService apiService, RedisService redis, LoginHandler loginHandler, GroupCreationHandler groupCreationHandler, ITokenService tokenService, GroupRemovingHandler groupRemovingHandler)
     {
         _botClient = new TelegramBotClient(botToken);
         _logger = logger;
@@ -29,9 +30,12 @@ public class BotService:IBotMessageSender
         _loginHandler = loginHandler;
         _groupCreationHandler = groupCreationHandler;
         _tokenService = tokenService;
+        _groupRemovingHandler = groupRemovingHandler;
 
         _loginHandler.SendMessage += SendMessage;
         _groupCreationHandler.SendMessage += SendMessage;
+        _groupRemovingHandler.SendMessage += SendMessage;
+        _groupRemovingHandler.BotClient = _botClient;
     }
     
     public async Task StartAsync()
@@ -131,6 +135,13 @@ public class BotService:IBotMessageSender
             case "/createGroup":
                 if (isAuthenticated)
                     await _groupCreationHandler.StartGroupCreation(chatId);
+                else
+                    await SendNotAuthenticatedMessage(chatId);
+                break;
+            
+            case "/removeGroup":
+                if (isAuthenticated)
+                    await _groupRemovingHandler.StartGroupRemoveProcess(chatId);
                 else
                     await SendNotAuthenticatedMessage(chatId);
                 break;
@@ -341,6 +352,10 @@ public class BotService:IBotMessageSender
         {
             await HandleRejectUser(callbackQuery, callbackData, chatId, messageId, token ?? "");
         }
+        else if (callbackData.StartsWith("group_remove_"))
+        {
+            await _groupRemovingHandler.HandleRemoveGroup(callbackQuery, callbackData, chatId, messageId, token ?? "");
+        }
     }
     
     private async Task HandleActivateUser(CallbackQuery callbackQuery, string callbackData, long chatId, int messageId, string token)
@@ -469,6 +484,7 @@ public class BotService:IBotMessageSender
                        "Доступные команды:\n" +
                        "/profile - Показать профиль\n" +
                        "/createGroup - Создать группу\n" +
+                       "/removeGroup - Удалить группу\n" +
                        "/logout - Выйти";
         }
         else

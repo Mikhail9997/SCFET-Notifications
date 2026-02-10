@@ -2,8 +2,10 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Application.Services;
+using Newtonsoft.Json;
 using TelegramBotAdministrators.Handlers;
 using TelegramBotAdministrators.Models;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace TelegramBotAdministrators.Services;
 
@@ -12,7 +14,9 @@ public interface IApiService
     Task<AuthResponse<LoginResponseDto>> LoginAsync(LoginDto loginDto);
     Task<RequestResult<UserProfileDto?>> GetProfileAsync(string token);
     Task<int> TestAuthorization(string token);
-    Task<GroupCreateResponse> CreateGroup(string token, GroupDto groupDto);
+    Task<GroupCreateOrRemoveResponse> CreateGroup(string token, GroupDto groupDto);
+    Task<GroupCreateOrRemoveResponse> RemoveGroup(string token, Guid groupId);
+    Task<List<GroupResponse>?> GetGroupsAsync();
     Task<List<User>> GetAdministratorsAsync();
     Task<UserActivateDto> ActivateUser(Guid userId, string token);
     Task<UserActivateDto> DeactivateUser(Guid userId, string token);
@@ -24,16 +28,10 @@ public class ApiService:IApiService
 {
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
-    private readonly RedisService _redis;
 
-    public ApiService(string baseUrl, RedisService redis, HttpHandler httpHandler)
+    public ApiService(string baseUrl)
     {
-        httpHandler.InnerHandler = new HttpClientHandler()
-        {
-            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true,
-        };
         _baseUrl = baseUrl;
-        _redis = redis;
         _httpClient = new HttpClient();
         _httpClient.Timeout = TimeSpan.FromSeconds(30);
     }
@@ -119,7 +117,7 @@ public class ApiService:IApiService
         return 503; // сервис недоступен;
     }
 
-    public async Task<GroupCreateResponse> CreateGroup(string token, GroupDto groupDto)
+    public async Task<GroupCreateOrRemoveResponse> CreateGroup(string token, GroupDto groupDto)
     {
         try
         {
@@ -130,7 +128,31 @@ public class ApiService:IApiService
             
             if (!string.IsNullOrEmpty(content))
             {
-                var data = JsonSerializer.Deserialize<GroupCreateResponse>(content, 
+                var data = JsonSerializer.Deserialize<GroupCreateOrRemoveResponse>(content, 
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return data;
+            }
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Remove group error: {ex.Message}");
+        }
+
+        return new GroupCreateOrRemoveResponse{Message = "Произошла неизвестная ошибка. Попробуйте снова", Success = false};
+    }
+
+    public async Task<GroupCreateOrRemoveResponse> RemoveGroup(string token, Guid groupId)
+    {
+        try
+        {
+            AddAuthHeader(token);
+
+            var response = await _httpClient.DeleteAsync($"{_baseUrl}/groups/{groupId}");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            if (!string.IsNullOrEmpty(content))
+            {
+                var data = JsonSerializer.Deserialize<GroupCreateOrRemoveResponse>(content, 
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 return data;
             }
@@ -140,9 +162,28 @@ public class ApiService:IApiService
             Console.WriteLine($"Create group error: {ex.Message}");
         }
 
-        return new GroupCreateResponse{Message = "Произошла неизвестная ошибка. Попробуйте снова", Success = false};
+        return new GroupCreateOrRemoveResponse{Message = "Произошла неизвестная ошибка. Попробуйте снова", Success = false};
     }
 
+    public async Task<List<GroupResponse>?> GetGroupsAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"{_baseUrl}/groups");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<List<GroupResponse>>(content);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting groups: {ex.Message}");
+        }
+
+        return null;
+    }
+    
     public async Task<List<User>> GetAdministratorsAsync()
     {
         try

@@ -17,9 +17,6 @@ public class GroupConfiguration : IEntityTypeConfiguration<Group>
             
         builder.HasIndex(g => g.Name)
             .IsUnique();
-
-        builder.Property(g => g.Description)
-            .HasMaxLength(500);
         
         builder.Property(g => g.CreatedAt)
             .HasColumnType("timestamp with time zone");

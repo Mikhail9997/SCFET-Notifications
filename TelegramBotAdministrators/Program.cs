@@ -46,19 +46,17 @@ var host = Host.CreateDefaultBuilder(args)
             return ConnectionMultiplexer.Connect(connectionString);
         });
         services.AddSingleton<ITokenService, TokenService>();
-        services.AddTransient<HttpHandler>();
         services.AddSingleton<RedisService>();
         services.AddSingleton<IApiService, ApiService>(provider =>
         {
             var apiBaseUrl = configuration["Api:BaseUrl"] 
                              ?? "http://localhost:5050";
-
-            var redis = provider.GetRequiredService<RedisService>();
-            var httpHandler = provider.GetRequiredService<HttpHandler>();
-            return new ApiService(apiBaseUrl, redis, httpHandler);
+            
+            return new ApiService(apiBaseUrl);
         });
         services.AddSingleton<LoginHandler>();
         services.AddSingleton<GroupCreationHandler>();
+        services.AddSingleton<GroupRemovingHandler>();
         
         services.AddSingleton<BotService>(provider =>
         {
@@ -70,9 +68,10 @@ var host = Host.CreateDefaultBuilder(args)
             var redis = provider.GetRequiredService<RedisService>();
             var loginHandler = provider.GetRequiredService<LoginHandler>();
             var groupCreationHandler = provider.GetRequiredService<GroupCreationHandler>();
+            var groupRemovingHandler = provider.GetRequiredService<GroupRemovingHandler>();
             var tokenService = provider.GetRequiredService<ITokenService>();
                         
-            return new BotService(botToken, logger, apiService, redis, loginHandler, groupCreationHandler, tokenService);
+            return new BotService(botToken, logger, apiService, redis, loginHandler, groupCreationHandler, tokenService, groupRemovingHandler);
         });
         
         services.AddHostedService<BotWorker>();

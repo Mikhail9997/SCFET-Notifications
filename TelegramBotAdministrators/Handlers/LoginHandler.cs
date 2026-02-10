@@ -92,7 +92,12 @@ public class LoginHandler
                                    $"👤 Добро пожаловать, {data.FirstName} {data.LastName}!\n" +
                                    $"📧 Email: {data.Email}\n" +
                                    $"🎯 Роль: {data.Role}\n\n" +
-                                   $"Теперь вы будете получать уведомления о новых пользователях для модерации.";
+                                   $"Теперь вы будете получать уведомления о новых пользователях для модерации.\n\n" +
+                                   $"Доступные команды:\n" +
+                                   "/profile - Показать профиль\n" +
+                                   "/createGroup - Создать группу\n" + 
+                                   "/removeGroup - Удалить группу\n" + 
+                                   "/logout - Выйти";
                 
                 await SendMessage.Invoke(chatId, welcomeMessage, null);
                 

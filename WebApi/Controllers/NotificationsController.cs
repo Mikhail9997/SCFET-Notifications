@@ -1,5 +1,6 @@
 ﻿using Application.Common.Interfaces;
 using Application.DTOs;
+using Application.Exceptions;
 using Application.Hubs;
 using Application.Services;
 using AutoMapper;
@@ -88,6 +89,10 @@ public class NotificationsController:ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (GroupNotFoundException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Внутренняя ошибка сервера" });
@@ -140,6 +145,10 @@ public class NotificationsController:ControllerBase
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message, success=false });
+        }
+        catch (GroupNotFoundException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {

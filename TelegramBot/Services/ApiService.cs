@@ -22,7 +22,7 @@ public class ApiService
     {
         try
         {
-            var response = await _httpClient.GetAsync($"{_baseUrl}/api/groups");
+            var response = await _httpClient.GetAsync($"{_baseUrl}/groups");
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
