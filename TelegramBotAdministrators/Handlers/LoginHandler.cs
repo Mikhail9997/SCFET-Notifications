@@ -97,6 +97,7 @@ public class LoginHandler
                                    "/profile - Показать профиль\n" +
                                    "/createGroup - Создать группу\n" + 
                                    "/removeGroup - Удалить группу\n" + 
+                                   "/getAppUrl - Получить ссылку для скачивания мобильного приложения\n" +
                                    "/logout - Выйти";
                 
                 await SendMessage.Invoke(chatId, welcomeMessage, null);

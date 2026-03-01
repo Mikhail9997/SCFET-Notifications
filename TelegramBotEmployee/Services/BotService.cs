@@ -1,4 +1,5 @@
 ﻿using Application.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using Telegram.Bot;
@@ -18,13 +19,16 @@ public class BotService
     private readonly ApiService _apiService;
     private readonly ILogger<BotService> _logger;
     private readonly RedisService _redis;
+    private readonly string _appUrl;
 
-    public BotService(string botToken, ILogger<BotService> logger, ApiService apiService, RedisService redis)
+    public BotService(string botToken, ILogger<BotService> logger, ApiService apiService, RedisService redis, IConfiguration configuration)
     {
         _botClient = new TelegramBotClient(botToken);
         _logger = logger;
         _apiService = apiService;
         _redis = redis;
+        
+        _appUrl = configuration["App_Url"] ?? "";
     }
     
     public async Task StartAsync()
@@ -298,6 +302,7 @@ public class BotService
                 $"👤 Имя: {userState.FirstName} {userState.LastName}\n" +
                 $"🎯 Роль: {userState.Role}\n\n" +
                 $"📱 Вы можете войти в мобильное приложение СКФЭТ с вашими учетными данными после проверки администрации.\n\n" +
+                $"📲 Скачать приложение: {_appUrl}\n\n" +
                 $"🔐 Логин: {userState.Email}\n" +
                 $"🔑 Пароль: {userState.Password}\n\n" +
                 $"⚠️ Сохраните эти данные в надежном месте!");

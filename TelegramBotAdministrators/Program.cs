@@ -71,7 +71,7 @@ var host = Host.CreateDefaultBuilder(args)
             var groupRemovingHandler = provider.GetRequiredService<GroupRemovingHandler>();
             var tokenService = provider.GetRequiredService<ITokenService>();
                         
-            return new BotService(botToken, logger, apiService, redis, loginHandler, groupCreationHandler, tokenService, groupRemovingHandler);
+            return new BotService(botToken, logger, apiService, redis, loginHandler, groupCreationHandler, tokenService, groupRemovingHandler, configuration);
         });
         
         services.AddHostedService<BotWorker>();

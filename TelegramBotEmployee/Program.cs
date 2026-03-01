@@ -64,7 +64,7 @@ var host = Host.CreateDefaultBuilder(args)
             var logger = provider.GetRequiredService<ILogger<BotService>>();
             var redis = provider.GetRequiredService<RedisService>();
 
-            return new BotService(botToken, logger, apiService, redis);
+            return new BotService(botToken, logger, apiService, redis, configuration);
         });
 
         services.AddHostedService<BotWorker>();

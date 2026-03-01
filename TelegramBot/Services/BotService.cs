@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using OpenTl.Schema;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -13,13 +14,15 @@ public class BotService
     private readonly ApiService _apiService;
     private readonly Dictionary<long, BotUserState> _userStates;
     private readonly ILogger<BotService> _logger;
+    private readonly string _appUrl;
     
-    public BotService(string botToken, string apiBaseUrl, ILogger<BotService> logger)
+    public BotService(string botToken, string apiBaseUrl, ILogger<BotService> logger, IConfiguration configuration)
     {
         _botClient = new TelegramBotClient(botToken);
         _apiService = new ApiService(apiBaseUrl);
         _userStates = new Dictionary<long, BotUserState>();
         _logger = logger;
+        _appUrl = configuration["App_Url"] ?? "";
     }
     
     public async Task StartAsync()
@@ -265,6 +268,7 @@ public class BotService
                 $"👤 Имя: {userState.FirstName} {userState.LastName}\n" +
                 $"🎯 Группа: {selectedGroup.Name}\n\n" +
                 $"📱 Вы можете войти в мобильное приложение СКФЭТ с вашими учетными данными после проверки администрации.\n\n" +
+                $"📲 Скачать приложение: {_appUrl}\n\n" +
                 $"🔐 Логин: {userState.Email}\n" +
                 $"🔑 Пароль: {userState.Password}\n\n" +
                 $"⚠️ Сохраните эти данные в надежном месте!");

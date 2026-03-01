@@ -1,5 +1,6 @@
 ﻿using System.Reflection.Metadata.Ecma335;
 using Application.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -20,8 +21,9 @@ public class BotService:IBotMessageSender
     private readonly GroupCreationHandler _groupCreationHandler;
     private readonly ITokenService _tokenService;
     private readonly GroupRemovingHandler _groupRemovingHandler;
+    private readonly string _appUrl;
     
-    public BotService(string botToken, ILogger<BotService> logger, IApiService apiService, RedisService redis, LoginHandler loginHandler, GroupCreationHandler groupCreationHandler, ITokenService tokenService, GroupRemovingHandler groupRemovingHandler)
+    public BotService(string botToken, ILogger<BotService> logger, IApiService apiService, RedisService redis, LoginHandler loginHandler, GroupCreationHandler groupCreationHandler, ITokenService tokenService, GroupRemovingHandler groupRemovingHandler, IConfiguration configuration)
     {
         _botClient = new TelegramBotClient(botToken);
         _logger = logger;
@@ -36,6 +38,8 @@ public class BotService:IBotMessageSender
         _groupCreationHandler.SendMessage += SendMessage;
         _groupRemovingHandler.SendMessage += SendMessage;
         _groupRemovingHandler.BotClient = _botClient;
+        
+        _appUrl = configuration["App_Url"] ?? "";
     }
     
     public async Task StartAsync()
@@ -146,6 +150,12 @@ public class BotService:IBotMessageSender
                     await SendNotAuthenticatedMessage(chatId);
                 break;
             
+            case "/getAppUrl":
+                if (isAuthenticated)
+                    await SendMessage(chatId, $"📲 Скачать приложение: {_appUrl}");
+                else
+                    await SendNotAuthenticatedMessage(chatId);
+                break;
             default:
                 await SendMessage(chatId, "Неизвестная команда");
                 break;
@@ -485,6 +495,7 @@ public class BotService:IBotMessageSender
                        "/profile - Показать профиль\n" +
                        "/createGroup - Создать группу\n" +
                        "/removeGroup - Удалить группу\n" +
+                       "/getAppUrl - Получить ссылку для скачивания мобильного приложения\n" +
                        "/logout - Выйти";
         }
         else

@@ -46,7 +46,7 @@ var host = Host.CreateDefaultBuilder(args)
                         
             var logger = provider.GetRequiredService<ILogger<BotService>>();
                         
-            return new BotService(botToken, apiBaseUrl, logger);
+            return new BotService(botToken, apiBaseUrl, logger, configuration);
         });
         
         services.AddHostedService<BotWorker>();
