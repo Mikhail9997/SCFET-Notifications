@@ -5,6 +5,7 @@ namespace WebApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Administrator")]
 public class BackupController: ControllerBase
 {
     private readonly IDatabaseBackupService _backupService;
