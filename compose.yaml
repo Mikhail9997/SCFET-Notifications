@@ -16,6 +16,7 @@ services:
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${DB_NAME};Username=postgres;Password=${DB_PASSWORD}
       - Kafka__BootstrapServers=kafka:9092
       - Redis__ConnectionStrings=redis-cache:6379,password=${Redis_PASSWORD},abortConnect=false,connectTimeout=5000,syncTimeout=5000
+      - CloudPud__Ip=${Host_Base_Url}
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://0.0.0.0:8080
       - DOCKER_NETWORK=scfet_network
@@ -56,6 +57,7 @@ services:
       - Kafka__BootstrapServers=kafka:9092
       - Redis__ConnectionStrings=redis-cache:6379,password=${Redis_PASSWORD},abortConnect=false,connectTimeout=5000,syncTimeout=5000
       - TelegramBot__Token=${TG_Students_TOKEN}
+      - Api__BaseUrl=${Api_Base_Url}
       - App_Url=${App_Url}
       - ASPNETCORE_ENVIRONMENT=Development
       - DOTNET_GCHeapHardLimit=0x8000000 # 128 MB
@@ -79,6 +81,7 @@ services:
       - Kafka__BootstrapServers=kafka:9092
       - Redis__ConnectionStrings=redis-cache:6379,password=${Redis_PASSWORD},abortConnect=false,connectTimeout=5000,syncTimeout=5000
       - TelegramBot__Token=${TG_Administartors_TOKEN}
+      - Api__BaseUrl=${Api_Base_Url}
       - App_Url=${App_Url}
       - ASPNETCORE_ENVIRONMENT=Development
       - DOTNET_GCHeapHardLimit=0x8000000 # 128 MB
@@ -107,6 +110,7 @@ services:
       - Redis__ConnectionStrings=redis-cache:6379,password=${Redis_PASSWORD},abortConnect=false,connectTimeout=5000,syncTimeout=5000
       - TelegramBot__Token=${TG_Employee_TOKEN}
       - App_Url=${App_Url}
+      - Api__BaseUrl=${Api_Base_Url}
       - ASPNETCORE_ENVIRONMENT=Development
       - DOTNET_GCHeapHardLimit=0x8000000 # 128 MB
     deploy:

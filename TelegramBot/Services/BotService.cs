@@ -209,7 +209,6 @@ public class BotService
                     $"group_{group.Id}")
             });
         }
-
         var replyMarkup = new InlineKeyboardMarkup(keyboard);
         
         await SendMessage(chatId, 
