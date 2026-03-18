@@ -5,6 +5,7 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramBot.Models;
+using User = TelegramBot.Models.User;
 
 namespace TelegramBot.Services;
 
@@ -365,6 +366,40 @@ public class BotService
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Ошибка при отправке уведомления для ChatId: {message.ChatId}");
+        }
+    }
+    
+    public async Task SendMaintenanceNotificationAsync(MaintenanceNotificationMessage notification)
+    {
+        try
+        {
+            var message = $"⚠️ ТЕХНИЧЕСКИЕ РАБОТЫ\n\n" +
+                          $"{notification.Title}\n" +
+                          $"{notification.Message}\n\n" +
+                          $"🕐 Начало: {notification.StartTime:dd.MM.yyyy HH:mm}\n" +
+                          (notification.EndTime.HasValue
+                              ? $"🕐 Окончание: {notification.EndTime:dd.MM.yyyy HH:mm}\n"
+                              : "");
+
+            List<User> students = await _apiService.GetStudents();
+            
+            List<User> uniqueStudents = students
+                .Where(s => !string.IsNullOrEmpty(s.ChatId) && long.TryParse(s.ChatId, out var _))
+                .DistinctBy(s => s.ChatId)
+                .ToList();
+
+            foreach (User student in uniqueStudents)
+            {
+                if (long.TryParse(student.ChatId, out long chatId))
+                {
+                    await SendMessage(chatId, message);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending maintenance notification to users");
+            throw;
         }
     }
     

@@ -12,7 +12,7 @@ public class KafkaConsumerService:BackgroundService
     private readonly IConsumer<Ignore, string> _consumer;
     private readonly ILogger<KafkaConsumerService> _logger;
     private readonly BotService _botService;
-    private readonly string _topic;
+    private readonly string[] _topics;
 
     public KafkaConsumerService(
         ILogger<KafkaConsumerService> logger,
@@ -21,7 +21,10 @@ public class KafkaConsumerService:BackgroundService
     {
         _logger = logger;
         _botService = botService;
-        _topic = configuration["Kafka:Topics:UserIsActive"] ?? "notifications.userIsActiveChange";
+        string userIsActiveTopic = configuration["Kafka:Topics:UserIsActive"] ?? "notifications.userIsActiveChange";
+        string systemNotificationsTopic = configuration["Kafka:Topics:SystemNotifications"] ?? "system-notifications";
+
+        _topics = [userIsActiveTopic, systemNotificationsTopic];
 
         var consumerConfig = new ConsumerConfig
         {
@@ -38,7 +41,7 @@ public class KafkaConsumerService:BackgroundService
     {
         await Task.Delay(5000, stoppingToken);
         
-        _consumer.Subscribe(_topic);
+        _consumer.Subscribe(_topics);
         _logger.LogInformation("Kafka Consumer Service started");
 
         // Запускаем потребление
@@ -47,7 +50,7 @@ public class KafkaConsumerService:BackgroundService
         await consumingTask;
     }
     
-    private void StartConsuming(CancellationToken stoppingToken)
+    private async void StartConsuming(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -59,7 +62,18 @@ public class KafkaConsumerService:BackgroundService
                 {
                     if (consumeResult.Message?.Value != null)
                     {
-                        _ = ProcessNotificationAsync(consumeResult.Message.Value);
+                        if (consumeResult.Topic == _topics[0])
+                        {
+                            await ProcessUserIsActiveAsync(consumeResult.Message.Value);
+                        }
+                        else if (consumeResult.Topic == _topics[1])
+                        {
+                            await ProcessSystemNotificationAsync(consumeResult.Message.Value);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Unknown topic: {Topic}", consumeResult.Topic);
+                        }
                     }
                     _consumer.Commit(consumeResult);
                 }
@@ -79,7 +93,7 @@ public class KafkaConsumerService:BackgroundService
         _consumer.Close();
     }
     
-    private async Task ProcessNotificationAsync(string messageJson)
+    private async Task ProcessUserIsActiveAsync(string messageJson)
     {
         try
         {
@@ -102,6 +116,28 @@ public class KafkaConsumerService:BackgroundService
         }
     }
 
+    private async Task ProcessSystemNotificationAsync(string messageJson)
+    {
+        try
+        {
+            var message = JsonSerializer.Deserialize<MaintenanceNotificationMessage>(messageJson);
+            if (message == null)
+            {
+                _logger.LogWarning("Failed to deserialize Kafka message: {Message}", messageJson);
+                return;
+            }
+
+            _logger.LogInformation("Processing System Notification event");
+
+            await _botService.SendMaintenanceNotificationAsync(message);
+            _logger.LogInformation("Successfully processed System Notification event");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing System Notification message");
+        }
+    }
+    
     public override void Dispose()
     {
         _consumer?.Dispose();

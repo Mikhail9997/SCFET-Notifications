@@ -1,6 +1,6 @@
-﻿namespace TelegramBot.Models;
+﻿namespace Application.DTOs;
 
-public class User
+public class UserCommonDto
 {
     public Guid UserId { get; set; } = Guid.NewGuid();
     public string FirstName { get; set; } = string.Empty;

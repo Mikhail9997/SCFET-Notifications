@@ -10,6 +10,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 using TelegramBotEmployee.Models;
 using BotUserState = TelegramBotEmployee.Models.BotUserState;
 using RegistrationState = TelegramBotEmployee.Models.RegistrationState;
+using User = TelegramBotEmployee.Models.User;
 using UserRole = TelegramBotEmployee.Models.UserRole;
 
 namespace TelegramBotEmployee.Services;
@@ -429,6 +430,40 @@ public class BotService
         await SendMessage(chatId, messageText);
     }
 
+    public async Task SendMaintenanceNotificationAsync(MaintenanceNotificationMessage notification)
+    {
+        try
+        {
+            var message = $"⚠️ ТЕХНИЧЕСКИЕ РАБОТЫ\n\n" +
+                          $"{notification.Title}\n" +
+                          $"{notification.Message}\n\n" +
+                          $"🕐 Начало: {notification.StartTime:dd.MM.yyyy HH:mm}\n" +
+                          (notification.EndTime.HasValue
+                              ? $"🕐 Окончание: {notification.EndTime:dd.MM.yyyy HH:mm}\n"
+                              : "");
+
+            List<User> teachers = await _apiService.GetTeachers();
+            
+            List<User> uniqueStudents = teachers
+                .Where(t => !string.IsNullOrEmpty(t.ChatId) && long.TryParse(t.ChatId, out var _))
+                .DistinctBy(t => t.ChatId)
+                .ToList();
+
+            foreach (User teacher in uniqueStudents)
+            {
+                if (long.TryParse(teacher.ChatId, out long chatId))
+                {
+                    await SendMessage(chatId, message);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending maintenance notification to users");
+            throw;
+        }
+    }
+    
     private async Task<bool> CheckDailyLimitAsync(long chatId)
     {
         var userState = await _redis.GetAsync<BotUserState>($"{chatId.ToString()}-employee");

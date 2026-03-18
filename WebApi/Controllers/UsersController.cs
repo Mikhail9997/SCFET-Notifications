@@ -191,14 +191,46 @@ public class UsersController: ControllerBase
     public async Task<IActionResult> GetAdministratorsCommon()
     {
         var administrators = await _userRepository.GetUsersByRoleAsync(UserRole.Administrator);
-        return Ok(administrators.Select(u => new
+        return Ok(administrators.Select(u => new UserCommonDto()
         {
             UserId = u.Id,
-            u.IsActive,
-            u.FirstName,
-            u.LastName,
-            u.Email,
-            u.ChatId,
+            IsActive = u.IsActive,
+            FirstName = u.FirstName,
+            LastName = u.LastName,
+            Email = u.Email,
+            ChatId = u.ChatId,
+        }));
+    }
+
+    [HttpGet("students-common")]
+    public async Task<IActionResult> GetStudentsCommon()
+    {
+        var students = await _userRepository.GetUsersByRoleAsync(UserRole.Student);
+        
+        return Ok(students.Select(u => new UserCommonDto()
+        {
+            UserId = u.Id,
+            IsActive = u.IsActive,
+            FirstName = u.FirstName,
+            LastName = u.LastName,
+            Email = u.Email,
+            ChatId = u.ChatId,
+        }));
+    }
+    
+    [HttpGet("teachers-common")]
+    public async Task<IActionResult> GetTeachersCommon()
+    {
+        var teachers = await _userRepository.GetUsersByRoleAsync(UserRole.Teacher);
+        
+        return Ok(teachers.Select(u => new UserCommonDto()
+        {
+            UserId = u.Id,
+            IsActive = u.IsActive,
+            FirstName = u.FirstName,
+            LastName = u.LastName,
+            Email = u.Email,
+            ChatId = u.ChatId,
         }));
     }
     

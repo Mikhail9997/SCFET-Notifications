@@ -75,6 +75,29 @@ public class ApiService
         }
     }
 
+    public async Task<List<User>> GetStudents()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"{_baseUrl}/users/students-common");
+
+            if (response.IsSuccessStatusCode)
+            {
+                string content = await response.Content.ReadAsStringAsync();
+
+                return JsonSerializer.Deserialize<List<User>>(content, new JsonSerializerOptions()
+                {
+                    PropertyNameCaseInsensitive = true
+                }) ?? new List<User>();
+            }
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error during GetStudents: {ex.Message}");
+        }
+        return new List<User>();
+    }
+    
     public async Task<bool> CheckEmailExistsAsync(string email)
     {
         try

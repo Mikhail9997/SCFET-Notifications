@@ -9,6 +9,7 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramBotAdministrators.Handlers;
 using TelegramBotAdministrators.Models;
+using User = TelegramBotAdministrators.Models.User;
 
 namespace TelegramBotAdministrators.Services;
 
@@ -493,6 +494,40 @@ public class BotService:IBotMessageSender
         }
     }
 
+    public async Task SendMaintenanceNotificationAsync(MaintenanceNotificationMessage notification)
+    {
+        try
+        {
+            var message = $"⚠️ ТЕХНИЧЕСКИЕ РАБОТЫ\n\n" +
+                          $"{notification.Title}\n" +
+                          $"{notification.Message}\n\n" +
+                          $"🕐 Начало: {notification.StartTime:dd.MM.yyyy HH:mm}\n" +
+                          (notification.EndTime.HasValue
+                              ? $"🕐 Окончание: {notification.EndTime:dd.MM.yyyy HH:mm}\n"
+                              : "");
+
+            List<User> admins = await _apiService.GetAdministratorsAsync();
+            
+            List<User> uniqueAdmins = admins
+                .Where(t => !string.IsNullOrEmpty(t.ChatId) && long.TryParse(t.ChatId, out var _))
+                .DistinctBy(t => t.ChatId)
+                .ToList();
+
+            foreach (User admin in uniqueAdmins)
+            {
+                if (long.TryParse(admin.ChatId, out long chatId))
+                {
+                    await SendMessage(chatId, message);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending maintenance notification to users");
+            throw;
+        }
+    }
+    
     private async Task<bool> TestValidAccessTokenAsync(long chatIdLong)
     {
         string chatId = chatIdLong.ToString();

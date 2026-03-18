@@ -73,4 +73,27 @@ public class ApiService
             return false;
         }
     }
+    
+    public async Task<List<User>> GetTeachers()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"{_baseUrl}/users/teachers-common");
+
+            if (response.IsSuccessStatusCode)
+            {
+                string content = await response.Content.ReadAsStringAsync();
+
+                return JsonSerializer.Deserialize<List<User>>(content, new JsonSerializerOptions()
+                {
+                    PropertyNameCaseInsensitive = true
+                }) ?? new List<User>();
+            }
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error during GetTeachers: {ex.Message}");
+        }
+        return new List<User>();
+    }
 }

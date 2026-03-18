@@ -1,4 +1,4 @@
-﻿namespace TelegramBot.Models;
+﻿namespace TelegramBotEmployee.Models;
 
 public class User
 {

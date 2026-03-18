@@ -1,0 +1,9 @@
+﻿namespace Application.DTOs;
+
+public class MaintenanceNotificationDto
+{
+    public string Title { get; set; } = "Технические работы";
+    public string Message { get; set; } = string.Empty;
+    public DateTime StartTime { get; set; }
+    public DateTime? EndTime { get; set; }
+}
