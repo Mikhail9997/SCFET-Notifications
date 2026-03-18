@@ -1,4 +1,5 @@
-﻿using Application.Services;
+﻿using System.Net;
+using Application.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
@@ -23,8 +24,62 @@ public class BotService
 
     public BotService(string botToken, ILogger<BotService> logger, ApiService apiService, RedisService redis, IConfiguration configuration)
     {
-        _botClient = new TelegramBotClient(botToken);
         _logger = logger;
+        
+        bool useProxy = configuration.GetValue<bool>("TelegramBot:UseProxy", false);
+        string? proxyHost = configuration["TelegramBot:Proxy:Host"];
+        int? proxyPort = configuration.GetValue<int?>("TelegramBot:Proxy:Port");
+        string? proxyType = configuration["TelegramBot:Proxy:Type"] ?? "http";
+        
+        HttpMessageHandler httpMessageHandler;
+    
+        if (useProxy && !string.IsNullOrEmpty(proxyHost) && proxyPort.HasValue)
+        {
+            _logger.LogInformation($"Using {proxyType} proxy: {proxyHost}:{proxyPort}");
+        
+            if (proxyType.ToLower() == "socks5")
+            {
+                // Для SOCKS5 используем SocketsHttpHandler
+                var proxy = new WebProxy($"socks5://{proxyHost}:{proxyPort.Value}")
+                {
+                    BypassProxyOnLocal = false
+                };
+            
+                httpMessageHandler = new SocketsHttpHandler
+                {
+                    Proxy = proxy,
+                    UseProxy = true,
+                    ConnectTimeout = TimeSpan.FromSeconds(30), 
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+                    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+                    MaxConnectionsPerServer = 10,
+                    SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+                    {
+                        RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true
+                    }
+                };
+            }
+            else
+            {
+                var proxy = new WebProxy(proxyHost, proxyPort.Value);
+                httpMessageHandler = new HttpClientHandler
+                {
+                    Proxy = proxy,
+                    UseProxy = true
+                };
+            }
+        }
+        else
+        {
+            httpMessageHandler = new HttpClientHandler();
+        }
+    
+        var httpClient = new HttpClient(httpMessageHandler)
+        {
+            Timeout = TimeSpan.FromSeconds(60)
+        };
+    
+        _botClient = new TelegramBotClient(botToken, httpClient);
         _apiService = apiService;
         _redis = redis;
         

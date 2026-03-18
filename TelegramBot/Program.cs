@@ -35,7 +35,7 @@ var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
         var configuration = context.Configuration;
-
+        
         services.AddSingleton<BotService>(provider =>
         {
             var botToken = configuration["TelegramBot:Token"]
