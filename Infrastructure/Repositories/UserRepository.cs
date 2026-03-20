@@ -90,11 +90,11 @@ public class UserRepository : BaseRepository<User>, IUserRepository
                            (excludeUserId == null || u.Id != excludeUserId));
     }
 
-    public async Task<bool> IsDeviceTokenUniqueAsync(string token)
+    public async Task<bool> IsTelegramIdUniqueAsync(string token)
     {
         return !await _context.Users
             .Where(u => u.Role == UserRole.Student)
-            .AnyAsync(u => u.DeviceToken != null && u.DeviceToken.ToLower() == token.ToLower());
+            .AnyAsync(u => u.TelegramId != null && u.TelegramId.ToLower() == token.ToLower());
     }
     
     public override async Task<User?> GetByIdAsync(Guid id)

@@ -1,23 +1,5 @@
 # This is a generated file. Not intended for manual editing.
 services:
-  telegrambotadministrators:
-    build:
-      context: "C:\\Users\\mkazm\\RiderProjects\\SCFET"
-      dockerfile: "TelegramBotAdministrators/Dockerfile"
-      target: "base"
-    command: []
-    entrypoint:
-    - "dotnet"
-    - "/app/bin/Debug/net9.0/TelegramBotAdministrators.dll"
-    environment:
-      DOTNET_USE_POLLING_FILE_WATCHER: "true"
-    image: "telegrambotadministrators:dev"
-    ports: []
-    volumes:
-    - "C:\\Users\\mkazm\\RiderProjects\\SCFET\\TelegramBotAdministrators:/app:rw"
-    - "C:\\Users\\mkazm\\RiderProjects\\SCFET:/src:rw"
-    - "C:\\Users\\mkazm\\.nuget\\packages:/home/app/.nuget/packages"
-    working_dir: "/app"
   webapi:
     build:
       context: "C:\\Users\\mkazm\\RiderProjects\\SCFET"

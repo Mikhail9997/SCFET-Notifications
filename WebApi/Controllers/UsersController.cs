@@ -269,7 +269,7 @@ public class UsersController: ControllerBase
         if (user == null)
             return NotFound(new { message = "Пользователь не найден" });
 
-        user.DeviceToken = tokenDto.Token;
+        user.TelegramId = tokenDto.Token;
         await _userRepository.UpdateAsync(user);
 
         return Ok(new { message = "Device token обновлен" });

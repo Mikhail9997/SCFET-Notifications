@@ -17,6 +17,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(u => u.Email)
             .IsUnique();
 
+        builder.HasIndex(u => u.PhoneNumber)
+            .IsUnique();
+
+        builder.Property(u => u.DeviceToken)
+            .HasMaxLength(500);
+
         builder.Property(u => u.PasswordHash)
             .IsRequired()
             .HasMaxLength(500);
@@ -33,7 +39,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasConversion<string>();
 
-        builder.Property(u => u.DeviceToken)
+        builder.Property(u => u.TelegramId)
             .HasMaxLength(500);
         
         builder.Property(u => u.CreatedAt)

@@ -137,7 +137,7 @@ public class AuthService
             return RegistrationResult.DeviceTokenNullError;
         }
 
-        if (!await _userRepository.IsDeviceTokenUniqueAsync(registerDto.TelegramId) && registerDto.Role == UserRole.Student)
+        if (!await _userRepository.IsTelegramIdUniqueAsync(registerDto.TelegramId) && registerDto.Role == UserRole.Student)
         {
             return RegistrationResult.DeviceTokenAlreadyExists;
         }
@@ -151,7 +151,7 @@ public class AuthService
             LastName = registerDto.LastName,
             Role = registerDto.Role,
             GroupId = registerDto.Role == UserRole.Student ? registerDto.GroupId : null,
-            DeviceToken = registerDto.TelegramId ?? null,
+            TelegramId = registerDto.TelegramId ?? null,
             IsActive = registerDto.IsActive ?? false,
             ChatId = registerDto.ChatId ?? null
         };
@@ -216,7 +216,7 @@ public class AuthService
             LastName = registerDto.LastName,
             Role = registerDto.Role,
             GroupId = registerDto.Role == UserRole.Student ? registerDto.GroupId : null,
-            DeviceToken = registerDto.TelegramId ?? null,
+            TelegramId = registerDto.TelegramId ?? null,
             IsActive = registerDto.IsActive ?? false,
             ChatId = registerDto.ChatId ?? null
         };

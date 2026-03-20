@@ -6,13 +6,15 @@ public class User : BaseEntity
     public string PasswordHash { get; set; } = string.Empty;
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string? DeviceToken { get; set; }
+    public string? TelegramId { get; set; }
+    public string? ChatId { get; set; }
+    public string? RefreshToken { get; set; }
     public bool IsActive { get; set; }
     public UserRole Role { get; set; }
     public Guid? GroupId { get; set; }
     public Group? Group { get; set; }
-    public string? DeviceToken { get; set; }
-    public string? ChatId { get; set; }
-    public string? RefreshToken { get; set; }
     public DateTime? RefreshTokenExpiryTime { get; set; }
     // Навигация
     public ICollection<Notification> SentNotifications { get; set; } = new List<Notification>();

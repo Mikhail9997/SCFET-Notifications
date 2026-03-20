@@ -78,7 +78,7 @@ namespace Infrastructure;
                 RefreshToken = null,
                 RefreshTokenExpiryTime = null,
                 GroupId = null,
-                DeviceToken = null,
+                TelegramId = null,
                 ChatId = null,
                 UpdatedAt = null
             };
@@ -96,7 +96,7 @@ namespace Infrastructure;
                 RefreshToken = null,
                 RefreshTokenExpiryTime = null,
                 GroupId = null,
-                DeviceToken = null,
+                TelegramId = null,
                 ChatId = null,
                 UpdatedAt = null
             };
@@ -114,7 +114,7 @@ namespace Infrastructure;
                 RefreshToken = null,
                 RefreshTokenExpiryTime = null,
                 GroupId = null,
-                DeviceToken = null,
+                TelegramId = null,
                 ChatId = null,
                 UpdatedAt = null
             };
@@ -132,7 +132,7 @@ namespace Infrastructure;
                 RefreshToken = null,
                 RefreshTokenExpiryTime = null,
                 GroupId = null,
-                DeviceToken = null,
+                TelegramId = null,
                 ChatId = null,
                 UpdatedAt = null
             };
@@ -150,7 +150,7 @@ namespace Infrastructure;
                 RefreshToken = null,
                 RefreshTokenExpiryTime = null,
                 GroupId = null,
-                DeviceToken = null,
+                TelegramId = null,
                 ChatId = null,
                 UpdatedAt = null
             };
@@ -168,7 +168,7 @@ namespace Infrastructure;
                 RefreshToken = null,
                 RefreshTokenExpiryTime = null,
                 GroupId = null,
-                DeviceToken = null,
+                TelegramId = null,
                 ChatId = null,
                 UpdatedAt = null
             };
