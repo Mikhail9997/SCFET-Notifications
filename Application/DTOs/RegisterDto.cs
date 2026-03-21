@@ -9,6 +9,7 @@ public class RegisterDto
     public string ConfirmPassword { get; set; } = string.Empty;
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
+    public string PhoneNumber { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public Guid? GroupId { get; set; } // Для студентов - привязка к группе
     public string? TelegramId { get; set; } = string.Empty;

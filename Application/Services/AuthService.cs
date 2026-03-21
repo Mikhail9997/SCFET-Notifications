@@ -83,6 +83,7 @@ public class AuthService
             Email = user.Email,
             FirstName = user.FirstName,
             LastName = user.LastName,
+            PhoneNumber = user.PhoneNumber,
             Role = user.Role.ToString(),
             GroupName = user.Group?.Name,
             AccessToken = accessToken,
@@ -96,6 +97,7 @@ public class AuthService
         };
     }
     
+    // регистрация для студентов
     public async Task<RegistrationResult> RegisterAsync(RegisterDto registerDto, Guid? currentUserId = null)
     {
         // Валидация пароля
@@ -105,6 +107,13 @@ public class AuthService
         // Проверка уникальности email
         if (!await _userRepository.IsEmailUniqueAsync(registerDto.Email))
             return RegistrationResult.EmailAlreadyExists;
+        
+        //Проверка уникальности номера телефона для студентов
+        //(учителя и админы могут иметь одинаковые номера телефона)
+        if (!await _userRepository.IsPhoneUniqueAsync(registerDto.PhoneNumber))
+        {
+            return RegistrationResult.PhoneNumberAlreadyExists;
+        }
 
         // Валидация роли (только администраторы могут создавать учителей и администраторов)
         if (currentUserId.HasValue)
@@ -149,6 +158,7 @@ public class AuthService
             PasswordHash = _passwordHasher.HashPassword(registerDto.Password),
             FirstName = registerDto.FirstName,
             LastName = registerDto.LastName,
+            PhoneNumber = registerDto.PhoneNumber,
             Role = registerDto.Role,
             GroupId = registerDto.Role == UserRole.Student ? registerDto.GroupId : null,
             TelegramId = registerDto.TelegramId ?? null,
@@ -179,6 +189,7 @@ public class AuthService
             FirstName = user.FirstName,
             LastName = user.LastName,
             Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
             Role = user.Role.ToString(),
             UserId = user.Id
         };
@@ -214,6 +225,7 @@ public class AuthService
             PasswordHash = _passwordHasher.HashPassword(registerDto.Password),
             FirstName = registerDto.FirstName,
             LastName = registerDto.LastName,
+            PhoneNumber = registerDto.PhoneNumber,
             Role = registerDto.Role,
             GroupId = registerDto.Role == UserRole.Student ? registerDto.GroupId : null,
             TelegramId = registerDto.TelegramId ?? null,
@@ -237,6 +249,7 @@ public class AuthService
             FirstName = user.FirstName,
             LastName = user.LastName,
             Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
             Role = user.Role.ToString(),
             UserId = user.Id
         };
@@ -271,6 +284,15 @@ public class AuthService
         return false;
     }
 
+    public async Task<bool> CheckPhoneNumberExist(string phoneNumber)
+    {
+        if (!await _userRepository.IsPhoneUniqueAsync(phoneNumber))
+        {
+            return true;
+        }
+        return false;
+    }
+    
     public async Task<TokenDto> RefreshTokenAsync(string accessToken, string refreshToken)
     {
         var principal = _jwtTokenGenerator.GetPrincipalFromExpiredToken(accessToken);
@@ -335,6 +357,7 @@ public enum RegistrationResult
 {
     Success,
     EmailAlreadyExists,
+    PhoneNumberAlreadyExists,
     PasswordsDoNotMatch,
     InsufficientPermissions,
     InvalidGroupAssignment,

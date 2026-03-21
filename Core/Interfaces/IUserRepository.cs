@@ -10,5 +10,6 @@ public interface IUserRepository : IRepository<User>
     Task<IReadOnlyList<User>> GetUsersByGroupAsync(Guid groupId);
     Task<IReadOnlyList<User>> FilterAsync(FilterEntity query, IEnumerable<User>? users = null);
     Task<bool> IsEmailUniqueAsync(string email, Guid? excludeUserId = null);
+    Task<bool> IsPhoneUniqueAsync(string phone);
     Task<bool> IsTelegramIdUniqueAsync(string token);
 }

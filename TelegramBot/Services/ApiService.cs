@@ -116,4 +116,23 @@ public class ApiService
             return false;
         }
     }
+    
+    public async Task<bool> CheckPhoneNumberExistsAsync(string phoneNumber)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"{_baseUrl}/auth/check-phone-number-exist/{phoneNumber}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            return false;
+        }
+        catch(Exception ex)
+        {
+            return false;
+        }
+    }
 }

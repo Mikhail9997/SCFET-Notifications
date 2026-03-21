@@ -127,6 +127,7 @@ public class AuthController: ControllerBase
         {
             RegistrationResult.Success => Ok(new { message = "Регистрация успешна" }),
             RegistrationResult.EmailAlreadyExists => BadRequest(new { message = "Пользователь с таким email уже существует" }),
+            RegistrationResult.PhoneNumberAlreadyExists => BadRequest(new { message = "Пользователь с таким номером телефона уже существует" }),
             RegistrationResult.PasswordsDoNotMatch => BadRequest(new { message = "Пароли не совпадают" }),
             RegistrationResult.InvalidGroupAssignment => BadRequest(new { message = "Некорректное назначение группы" }),
             RegistrationResult.GroupNotFound => BadRequest(new { message = "Группа не найдена" }),
@@ -200,6 +201,23 @@ public class AuthController: ControllerBase
                 return Ok(new { message = $"Пользователь с email:{email} существует" });
             }
             return BadRequest(new { message = $"Пользователь с email:{email} не существует" });
+        }
+        catch(Exception ex)
+        {
+            return BadRequest(new { message = $"Внутренняя ошибка сервера" });
+        }
+    }
+
+    [HttpGet("check-phone-number-exist/{phoneNumber}")]
+    public async Task<IActionResult> CheckPhoneNumberExist(string phoneNumber)
+    {
+        try
+        {
+            if (await _authService.CheckPhoneNumberExist(phoneNumber))
+            {
+                return Ok(new { message = $"Пользователь с номером телефона:{phoneNumber} существует" });
+            }
+            return BadRequest(new { message = $"Пользователь с номером телефона:{phoneNumber} не существует" });
         }
         catch(Exception ex)
         {

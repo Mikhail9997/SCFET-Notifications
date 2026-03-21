@@ -1,5 +1,59 @@
 # This is a generated file. Not intended for manual editing.
 services:
+  telegramBot:
+    build:
+      context: "C:\\Users\\mkazm\\RiderProjects\\SCFET"
+      dockerfile: "TelegramBot/Dockerfile"
+      target: "base"
+    command: []
+    entrypoint:
+    - "dotnet"
+    - "/app/bin/Debug/net9.0/TelegramBot.dll"
+    environment:
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+    image: "telegrambot:dev"
+    ports: []
+    volumes:
+    - "C:\\Users\\mkazm\\RiderProjects\\SCFET\\TelegramBot:/app:rw"
+    - "C:\\Users\\mkazm\\RiderProjects\\SCFET:/src:rw"
+    - "C:\\Users\\mkazm\\.nuget\\packages:/home/app/.nuget/packages"
+    working_dir: "/app"
+  telegrambotadministrators:
+    build:
+      context: "C:\\Users\\mkazm\\RiderProjects\\SCFET"
+      dockerfile: "TelegramBotAdministrators/Dockerfile"
+      target: "base"
+    command: []
+    entrypoint:
+    - "dotnet"
+    - "/app/bin/Debug/net9.0/TelegramBotAdministrators.dll"
+    environment:
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+    image: "telegrambotadministrators:dev"
+    ports: []
+    volumes:
+    - "C:\\Users\\mkazm\\RiderProjects\\SCFET\\TelegramBotAdministrators:/app:rw"
+    - "C:\\Users\\mkazm\\RiderProjects\\SCFET:/src:rw"
+    - "C:\\Users\\mkazm\\.nuget\\packages:/home/app/.nuget/packages"
+    working_dir: "/app"
+  telegrambotemployee:
+    build:
+      context: "C:\\Users\\mkazm\\RiderProjects\\SCFET"
+      dockerfile: "TelegramBotEmployee/Dockerfile"
+      target: "base"
+    command: []
+    entrypoint:
+    - "dotnet"
+    - "/app/bin/Debug/net9.0/TelegramBotEmployee.dll"
+    environment:
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+    image: "telegrambotemployee:dev"
+    ports: []
+    volumes:
+    - "C:\\Users\\mkazm\\RiderProjects\\SCFET\\TelegramBotEmployee:/app:rw"
+    - "C:\\Users\\mkazm\\RiderProjects\\SCFET:/src:rw"
+    - "C:\\Users\\mkazm\\.nuget\\packages:/home/app/.nuget/packages"
+    working_dir: "/app"
   webapi:
     build:
       context: "C:\\Users\\mkazm\\RiderProjects\\SCFET"

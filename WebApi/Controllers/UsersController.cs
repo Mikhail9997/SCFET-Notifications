@@ -50,6 +50,7 @@ public class UsersController: ControllerBase
             user.Email,
             user.FirstName,
             user.LastName,
+            user.PhoneNumber,
             Role = user.Role.ToString(),
             Group = user.Group?.Name,
             GroupId = user.GroupId
@@ -73,6 +74,7 @@ public class UsersController: ControllerBase
                 s.FirstName,
                 s.LastName,
                 s.Email,
+                s.PhoneNumber,
                 Group = s.Group?.Name,
                 GroupId = s.GroupId,
                 Role = UserRole.Student.ToString()
@@ -95,6 +97,7 @@ public class UsersController: ControllerBase
             s.FirstName,
             s.LastName,
             s.Email,
+            s.PhoneNumber,
             Group = s.Group?.Name,
             GroupId = s.GroupId,
             Role = UserRole.Student.ToString()
@@ -119,6 +122,7 @@ public class UsersController: ControllerBase
                 t.FirstName,
                 t.LastName,
                 t.Email,
+                t.PhoneNumber,
                 Role = UserRole.Teacher.ToString()
             }));
         }
@@ -139,6 +143,7 @@ public class UsersController: ControllerBase
             t.FirstName,
             t.LastName,
             t.Email,
+            t.PhoneNumber,
             Role = UserRole.Teacher.ToString()
         }));
     }
@@ -155,13 +160,14 @@ public class UsersController: ControllerBase
         var cachedResult = await _redis.GetAsync<List<UserDto>>(cacheKey);
         if (cachedResult != null && cachedResult.Any())
         {
-            return Ok(cachedResult.Select(t => new
+            return Ok(cachedResult.Select(a => new
             {
-                UserId = t.Id,
-                t.FirstName,
-                t.LastName,
-                t.Email,
-                t.ChatId,
+                UserId = a.Id,
+                a.FirstName,
+                a.LastName,
+                a.Email,
+                a.PhoneNumber,
+                a.ChatId,
                 Role = UserRole.Administrator.ToString()
             }));
         }
@@ -176,13 +182,14 @@ public class UsersController: ControllerBase
         admins = (List<User>)await _userRepository.FilterAsync(_mapper.Map<FilterEntity>(query), admins);
         // Кешируем результат с фильтрацией
         await _redis.SetAsync(cacheKey, _mapper.Map<List<UserDto>>(admins), TimeSpan.FromMinutes(minutes));
-        return Ok(admins.Select(t => new
+        return Ok(admins.Select(a => new
         {
-            UserId = t.Id,
-            t.FirstName,
-            t.LastName,
-            t.Email,
-            t.ChatId,
+            UserId = a.Id,
+            a.FirstName,
+            a.LastName,
+            a.PhoneNumber,
+            a.Email,
+            a.ChatId,
             Role = UserRole.Administrator.ToString()
         }));
     }
@@ -197,6 +204,7 @@ public class UsersController: ControllerBase
             IsActive = u.IsActive,
             FirstName = u.FirstName,
             LastName = u.LastName,
+            PhoneNumber = u.PhoneNumber,
             Email = u.Email,
             ChatId = u.ChatId,
         }));
@@ -213,6 +221,7 @@ public class UsersController: ControllerBase
             IsActive = u.IsActive,
             FirstName = u.FirstName,
             LastName = u.LastName,
+            PhoneNumber = u.PhoneNumber,
             Email = u.Email,
             ChatId = u.ChatId,
         }));
@@ -229,6 +238,7 @@ public class UsersController: ControllerBase
             IsActive = u.IsActive,
             FirstName = u.FirstName,
             LastName = u.LastName,
+            PhoneNumber = u.PhoneNumber,
             Email = u.Email,
             ChatId = u.ChatId,
         }));
@@ -252,6 +262,7 @@ public class UsersController: ControllerBase
         user.FirstName = updateDto.FirstName;
         user.LastName = updateDto.LastName;
         user.Email = updateDto.Email;
+        user.PhoneNumber = updateDto.PhoneNumber;
 
         await _userRepository.UpdateAsync(user);
 
@@ -269,7 +280,7 @@ public class UsersController: ControllerBase
         if (user == null)
             return NotFound(new { message = "Пользователь не найден" });
 
-        user.TelegramId = tokenDto.Token;
+        user.DeviceToken = tokenDto.Token;
         await _userRepository.UpdateAsync(user);
 
         return Ok(new { message = "Device token обновлен" });
@@ -305,6 +316,7 @@ public class UsersController: ControllerBase
             FirstName = user.FirstName,
             LastName = user.LastName,
             Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
             Role = user.Role.ToString(),
             ChatId = user.ChatId ?? string.Empty,
             IsActive = true,
@@ -347,6 +359,7 @@ public class UsersController: ControllerBase
             FirstName = user.FirstName,
             LastName = user.LastName,
             Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
             Role = user.Role.ToString(),
             ChatId = user.ChatId ?? string.Empty,
             IsActive = false,
@@ -384,6 +397,7 @@ public class UsersController: ControllerBase
                 FirstName = userToDelete.FirstName,
                 LastName = userToDelete.LastName,
                 Email = userToDelete.Email,
+                PhoneNumber = userToDelete.PhoneNumber,
                 Role = userToDelete.Role.ToString(),
                 ChatId = userToDelete.ChatId ?? string.Empty,
                 IsActive = false,

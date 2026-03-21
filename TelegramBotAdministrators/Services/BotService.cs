@@ -354,6 +354,7 @@ public class BotService:IBotMessageSender
             var userInfo = $"🆕 Новый пользователь зарегистрирован:\n\n" +
                            $"👤 Имя: {message.FirstName}\n" +
                            $"👤 Фамилия: {message.LastName}\n" +
+                           $"📞 Телефон: {message.PhoneNumber}\n" +
                            $"\ud83c\udfaf Роль: {message.Role}\n" +
                            $"📧 Email: {message.Email}\n" +
                            $"🆔 User ID: {message.UserId}";

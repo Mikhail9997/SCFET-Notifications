@@ -2,6 +2,7 @@
 using Application.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using PhoneNumbers;
 using StackExchange.Redis;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -174,7 +175,9 @@ public class BotService
             case RegistrationState.WaitingForEmail:
                 await ProcessEmail(chatId, message.Text);
                 break;
-                
+            case RegistrationState.WaitingForPhoneNumber:
+                await ProcessPhoneNumber(chatId, message.Text);
+                break;
             case RegistrationState.WaitingForFirstName:
                 await ProcessFirstName(chatId, message.Text);
                 break;
@@ -253,14 +256,33 @@ public class BotService
         var userState = await _redis.GetAsync<BotUserState>($"{chatId.ToString()}-employee");
         if (!await IsUserEnableAsync(userState, chatId)) return;
         
-        userState.State = RegistrationState.WaitingForFirstName;
+        userState.State = RegistrationState.WaitingForPhoneNumber;
         userState.Email = email;
 
         await _redis.SetAsync($"{chatId.ToString()}-employee", userState);
         
-        await SendMessage(chatId, "✅ Email принят!\n\n👤 Теперь введите ваше имя:");
+        await SendMessage(chatId, "✅ Email принят!\n\n📞 Теперь введите номер телефона в международном формате, например: +7 912 345-67-89:");
     }
 
+    private async Task ProcessPhoneNumber(long chatId, string phoneNumber)
+    {
+        if (!IsValidPhoneNumber(phoneNumber))
+        {
+            await SendMessage(chatId, "❌ Неверный формат номера телефона. Пожалуйста, введите корректный номер телефона:");
+            return;
+        }
+        
+        var userState = await _redis.GetAsync<BotUserState>($"{chatId.ToString()}-employee");
+        if (!await IsUserEnableAsync(userState, chatId)) return;
+        
+        userState.State = RegistrationState.WaitingForFirstName;
+        userState.PhoneNumber = phoneNumber;
+        
+        await _redis.SetAsync($"{chatId.ToString()}-employee", userState);
+        
+        await SendMessage(chatId, "✅ Номер телефона принят!\n\n👤 Теперь введите ваше имя:");
+    }
+    
     private async Task ProcessFirstName(long chatId, string firstName)
     {
         if (string.IsNullOrWhiteSpace(firstName) || firstName.Length < 2)
@@ -339,6 +361,7 @@ public class BotService
         var registerRequest = new RegisterRequest()
         {
             Email = userState.Email!,
+            PhoneNumber = userState.PhoneNumber!,
             Password = userState.Password!,
             ConfirmPassword = userState.Password!,
             FirstName = userState.FirstName!,
@@ -355,6 +378,7 @@ public class BotService
             await SendMessage(chatId,
                 $"🎉 Регистрация успешно завершена!\n\n" +
                 $"📧 Email: {userState.Email}\n" +
+                $"📞 Телефон: {userState.PhoneNumber}\n\n" +
                 $"👤 Имя: {userState.FirstName} {userState.LastName}\n" +
                 $"🎯 Роль: {userState.Role}\n\n" +
                 $"📱 Вы можете войти в мобильное приложение СКФЭТ с вашими учетными данными после проверки администрации.\n\n" +
@@ -394,11 +418,11 @@ public class BotService
             
             if (message.IsActive)
             {
-                await SendAccountApprovedMessage(chatId, message.FirstName, message.LastName, message.Email, message.Role);
+                await SendAccountApprovedMessage(chatId, message.FirstName, message.LastName, message.Email, message.Role, message.PhoneNumber);
             }
             else
             {
-                await SendAccountRejectedMessage(chatId, message.FirstName, message.LastName, message.Email);
+                await SendAccountRejectedMessage(chatId, message.FirstName, message.LastName, message.Email, message.PhoneNumber);
             }
         }
         catch (Exception ex)
@@ -407,11 +431,12 @@ public class BotService
         }
     }
     
-    private async Task SendAccountApprovedMessage(long chatId, string firstName, string lastName, string email, string role)
+    private async Task SendAccountApprovedMessage(long chatId, string firstName, string lastName, string email, string role, string phoneNumber)
     {
         var messageText = $"🎉 Ваш аккаунт активирован!\n\n" +
                           $"👤 Пользователь: {firstName} {lastName}\n" +
                           $"📧 Email: {email}\n" +
+                          $"📞 Телефон: {phoneNumber}\n" +
                           $"🎯 Роль: {role}\n\n" +
                           $"✅ Теперь вы можете полноценно использовать все возможности системы.\n\n" +
                           $"Спасибо за регистрацию!";
@@ -419,11 +444,12 @@ public class BotService
         await SendMessage(chatId, messageText);
     }
 
-    private async Task SendAccountRejectedMessage(long chatId, string firstName, string lastName, string email)
+    private async Task SendAccountRejectedMessage(long chatId, string firstName, string lastName, string email, string phoneNumber)
     {
         var messageText = $"❌ Ваш аккаунт отклонен\n\n" +
                           $"👤 Пользователь: {firstName} {lastName}\n" +
-                          $"📧 Email: {email}\n\n" +
+                          $"📧 Email: {email}\n" +
+                          $"📞 Телефон: {phoneNumber}\n\n" +
                           $"⚠️ К сожалению, ваша регистрация не была одобрена администратором.\n\n" +
                           $"Если вы считаете, что это ошибка, пожалуйста, свяжитесь с поддержкой.";
 
@@ -567,6 +593,22 @@ public class BotService
             return addr.Address == email;
         }
         catch
+        {
+            return false;
+        }
+    }
+    
+    private bool IsValidPhoneNumber(string phoneNumber)
+    {
+        try
+        {
+            var phoneUtil = PhoneNumberUtil.GetInstance();
+
+            var parsedNumber = phoneUtil.Parse(phoneNumber, null);
+        
+            return phoneUtil.IsValidNumber(parsedNumber);
+        }
+        catch (NumberParseException ex)
         {
             return false;
         }

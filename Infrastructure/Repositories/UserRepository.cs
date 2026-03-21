@@ -47,10 +47,7 @@ public class UserRepository : BaseRepository<User>, IUserRepository
         {
             return await filtered.ToListAsync();
         }
-        else
-        {
-            return filtered.ToList();
-        }
+        return filtered.ToList();
     }
 
     private IQueryable<User> ApplyFilters(IQueryable<User> source, FilterEntity query)
@@ -70,6 +67,11 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             source = source.Where(user => user.Email.Contains(query.Email));
         }
 
+        if (!string.IsNullOrEmpty(query.PhoneNumber))
+        {
+            source = source.Where(user => user.PhoneNumber.Contains(query.PhoneNumber));
+        }
+        
         if (query.IsActive != null)
         {
             source = source.Where(user => user.IsActive == query.IsActive);
@@ -88,6 +90,11 @@ public class UserRepository : BaseRepository<User>, IUserRepository
         return !await _context.Users
             .AnyAsync(u => u.Email.ToLower() == email.ToLower() && 
                            (excludeUserId == null || u.Id != excludeUserId));
+    }
+
+    public async Task<bool> IsPhoneUniqueAsync(string phone)
+    {
+        return !await _context.Users.AnyAsync(u => u.PhoneNumber == phone);
     }
 
     public async Task<bool> IsTelegramIdUniqueAsync(string token)

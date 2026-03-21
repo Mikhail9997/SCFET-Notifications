@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using PhoneNumbers;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -95,85 +96,98 @@ public class BotService
     {
         try
         {
-            if (update.Message?.Text == "/start" || update.Message?.Text == "/register")
+            Message? message = update.Message;
+            if (message != null && message.Text != null)
             {
-                await StartRegistration(update.Message.Chat.Id, update.Message.MessageId);
-
-                return;
+                if (message.Text.StartsWith("/"))
+                {
+                    await HandleCommandAsync(message);
+                    return;
+                }
             }
-
-            if (update.Message?.Text == "/info")
-            {
-                var from = update.Message.From;
-                await SendMessage(update.Message.Chat.Id, 
-                    $"👤 Ваш ID: {from.Id}\n" +
-                    $"📝 Username: @{from.Username}\n" +
-                    $"👤 Имя: {from.FirstName}\n" +
-                    $"💬 Chat ID: {update.Message.Chat.Id}");
-                return;
-            }
-            
-            var chatId = update.Message?.Chat.Id ?? update.CallbackQuery?.Message?.Chat.Id ?? 0;
-            
-            if(chatId == 0) return;
-
-            if (!_userStates.TryGetValue(chatId, out var userState))
-            {
-                await SendMessage(chatId, "Пожалуйста, начните регистрацию с помощью команды /start или /register");
-                return;
-            }
-
-            userState.LastActivity = DateTime.UtcNow;
-
-            //Обрабатываем текущее состояния пользователя в регистрации
-            switch (userState.State)
-            {
-                case RegistrationState.Start:
-                    await StartRegistration(chatId, update.Message.MessageId);
-                    break;
-                case RegistrationState.WaitingForEmail:
-                    await ProcessEmail(chatId, update.Message!.Text!);
-                    break;
-                
-                case RegistrationState.WaitingForFirstName:
-                    await ProcessFirstName(chatId, update.Message!.Text!);
-                    break;
-                
-                case RegistrationState.WaitingForLastName:
-                    await ProcessLastName(chatId, update.Message!.Text!);
-                    break;
-                
-                case RegistrationState.WaitingForPassword:
-                    await ProcessPassword(chatId, update.Message!.Text!);
-                    break;
-                
-                case RegistrationState.WaitingForGroupSelection:
-                    if (update.CallbackQuery != null)
-                    {
-                        await ProcessGroupSelection(chatId, update.CallbackQuery.Data!, update.CallbackQuery.Message!.MessageId, update.CallbackQuery.From.Id);
-                    }
-                    break;
-            }
+            await HandleTextAsync(update);
         }
         catch(Exception ex)
         {
             _logger.LogError(ex, "Error handling update");
         }
     }
+    
+    private async Task HandleCommandAsync(Message message)
+    {
+        var chatId = message.Chat.Id;
+        var command = message.Text;
 
-    private async Task StartRegistration(long chatId, int messageId)
+        switch (command)
+        {
+            case "/start":
+                await SendStartMessage(chatId);
+                break;
+            case "/registerAsStudent":
+                await StartRegistration(chatId, UserRole.Student);
+                break;
+            case "/info":
+                await SendInfoMessage(message);
+                break;
+        }
+    }
+
+    private async Task HandleTextAsync(Update update)
+    {
+        var chatId = update.Message?.Chat.Id ?? update?.CallbackQuery?.Message?.Chat.Id ?? 0;
+        
+        if (!_userStates.TryGetValue(chatId, out var userState))
+        {
+            await SendMessage(chatId, "Пожалуйста, начните регистрацию с помощью команды /start");
+            return;
+        }
+
+        userState.LastActivity = DateTime.UtcNow;
+
+        //Обрабатываем текущее состояния пользователя в регистрации
+        switch (userState.State)
+        {
+            case RegistrationState.WaitingForEmail:
+                await ProcessEmail(chatId, update.Message!.Text!);
+                break;
+            case RegistrationState.WaitingForPhoneNumber:
+                await ProcessPhoneNumber(chatId, update.Message!.Text!);
+                break;
+            case RegistrationState.WaitingForFirstName:
+                await ProcessFirstName(chatId, update.Message!.Text!);
+                break;
+                
+            case RegistrationState.WaitingForLastName:
+                await ProcessLastName(chatId, update.Message!.Text!);
+                break;
+                
+            case RegistrationState.WaitingForPassword:
+                await ProcessPassword(chatId, update.Message!.Text!, update.Message!.From!.Id);
+                break;
+                
+            case RegistrationState.WaitingForGroupSelection:
+                if (update.CallbackQuery != null)
+                {
+                    await ProcessGroupSelection(chatId, update.CallbackQuery.Data!, update.CallbackQuery.Message!.MessageId, update.CallbackQuery.From.Id);
+                }
+                break;
+            default:
+                await SendMessage(chatId,"Я тебя не понимаю");
+                break;
+        }
+    }
+    
+    private async Task StartRegistration(long chatId, UserRole role)
     {
         var userState = new BotUserState()
         {
             ChatId = chatId,
-            State = RegistrationState.WaitingForEmail
+            State = RegistrationState.WaitingForEmail,
+            Role = role
         };
 
         _userStates[chatId] = userState;
-        await SendMessage(chatId, 
-            "🎓 Добро пожаловать в систему уведомлений СКФЭТ!\n\n" +
-            "Давайте зарегистрируем вас в системе.\n\n" +
-            "📧 Пожалуйста, введите ваш email:");
+        await SendMessage(chatId, "📧 Пожалуйста, введите ваш email:");
     }
 
     private async Task ProcessEmail(long chatId, string email)
@@ -193,11 +207,33 @@ public class BotService
         }
 
         _userStates[chatId].Email = email;
-        _userStates[chatId].State = RegistrationState.WaitingForFirstName;
+        _userStates[chatId].State = RegistrationState.WaitingForPhoneNumber;
         
-        await SendMessage(chatId, "✅ Email принят!\n\n👤 Теперь введите ваше имя:");
+        await SendMessage(chatId, "✅ Email принят!\n\n📞 Теперь введите номер телефона в международном формате, например: +7 912 345-67-89:");
     }
 
+    private async Task ProcessPhoneNumber(long chatId, string phoneNumber)
+    {
+        if (!IsValidPhoneNumber(phoneNumber))
+        {
+            await SendMessage(chatId, "❌ Неверный формат номера телефона. Пожалуйста, введите корректный номер телефона:");
+            return;
+        }
+        
+        // проверяем, существует ли номер телефона
+        bool phoneNumberExist = await _apiService.CheckPhoneNumberExistsAsync(phoneNumber);
+        if (phoneNumberExist)
+        {
+            await SendMessage(chatId, "❌ Пользователь с таким номером телефона уже зарегистрирован. Пожалуйста, введите другой номер телефона:");
+            return;
+        }
+        
+        _userStates[chatId].PhoneNumber = phoneNumber;
+        _userStates[chatId].State = RegistrationState.WaitingForFirstName;
+        
+        await SendMessage(chatId, "✅ Номер телефона принят!\n\n👤 Теперь введите ваше имя:");
+    }
+    
     private async Task ProcessFirstName(long chatId, string firstName)
     {
         if (string.IsNullOrWhiteSpace(firstName) || firstName.Length < 2)
@@ -228,7 +264,7 @@ public class BotService
             "🔐 Теперь придумайте пароль (минимум 6 символов):");
     }
 
-    private async Task ProcessPassword(long chatId, string password)
+    private async Task ProcessPassword(long chatId, string password, long userId)
     {
         if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
         {
@@ -237,12 +273,20 @@ public class BotService
         }
 
         _userStates[chatId].Password = password;
-        _userStates[chatId].State = RegistrationState.WaitingForGroupSelection;
-        
-        await ShowGroupSelection(chatId);
+
+        // группу могут иметь только студенты
+        if (_userStates[chatId].Role == UserRole.Student)
+        {
+            _userStates[chatId].State = RegistrationState.WaitingForGroupSelection;
+            await ShowGroupSelection(chatId, userId);
+        }
+        else
+        {
+            await ProcessRegistration(chatId, userId);
+        }
     }
 
-    private async Task ShowGroupSelection(long chatId)
+    private async Task ShowGroupSelection(long chatId, long userId)
     {
         var groups = await _apiService.GetGroupsAsync();
 
@@ -286,11 +330,16 @@ public class BotService
         if (selectedGroup == null)
         {
             await SendMessage(chatId, "❌ Ошибка выбора группы. Попробуйте снова.");
-            await ShowGroupSelection(chatId);
+            await ShowGroupSelection(chatId, userId);
             return;
         }
 
-        userState.SelectedGroup = groupId;
+        userState.SelectedGroup = new Group()
+        {
+            Name = selectedGroup.Name,
+            Id = selectedGroup.Id,
+            StudentCount = selectedGroup.StudentCount
+        };
         userState.State = RegistrationState.Completed;
         
         // Удаляем клавиатуру
@@ -298,16 +347,24 @@ public class BotService
             chatId, messageId, 
             replyMarkup: null);
         
+        await ProcessRegistration(chatId, userId);
+    }
+
+    private async Task ProcessRegistration(long chatId, long userId)
+    {
+        var userState = _userStates[chatId];
+        
         // Регистрируем пользователя
         var registerRequest = new RegisterRequest
         {
             Email = userState.Email!,
+            PhoneNumber = userState.PhoneNumber!,
             Password = userState.Password!,
             ConfirmPassword = userState.Password!,
             FirstName = userState.FirstName!,
             LastName = userState.LastName!,
-            Role = Enum.TryParse("Student", out UserRole role) ? role : UserRole.Student,
-            GroupId = Guid.Parse(groupId),
+            Role = userState.Role!.Value,
+            GroupId = userState?.SelectedGroup?.Id ?? null,
             ChatId = chatId.ToString(),
             TelegramId = userId.ToString().ToLower()
         };
@@ -319,16 +376,14 @@ public class BotService
             await SendMessage(chatId,
                 $"🎉 Регистрация успешно завершена!\n\n" +
                 $"📧 Email: {userState.Email}\n" +
+                $"📞 Телефон: {userState.PhoneNumber}\n\n" +
                 $"👤 Имя: {userState.FirstName} {userState.LastName}\n" +
-                $"🎯 Группа: {selectedGroup.Name}\n\n" +
+                $"🎯 Группа: {userState.SelectedGroup!.Name}\n\n" +
                 $"📱 Вы можете войти в мобильное приложение СКФЭТ с вашими учетными данными после проверки администрации.\n\n" +
                 $"📲 Скачать приложение: {_appUrl}\n\n" +
                 $"🔐 Логин: {userState.Email}\n" +
                 $"🔑 Пароль: {userState.Password}\n\n" +
                 $"⚠️ Сохраните эти данные в надежном месте!");
-
-            // Очищаем состояние
-            _userStates.Remove(chatId);
         }
         else
         {
@@ -341,11 +396,9 @@ public class BotService
             };
 
             await SendMessage(chatId, message);
-            
-            // Сбрасываем состояние
-            userState.State = RegistrationState.Start;
         }
-        
+        // Очищаем состояние
+        _userStates.Remove(chatId);
     }
     
     public async Task OnUserIsActiveEvent(UserIsActiveMessage message)
@@ -356,11 +409,11 @@ public class BotService
             
             if (message.IsActive)
             {
-                await SendAccountApprovedMessage(chatId, message.FirstName, message.LastName, message.Email, message.Role);
+                await SendAccountApprovedMessage(chatId, message.FirstName, message.LastName, message.Email, message.Role, message.PhoneNumber);
             }
             else
             {
-                await SendAccountRejectedMessage(chatId, message.FirstName, message.LastName, message.Email);
+                await SendAccountRejectedMessage(chatId, message.FirstName, message.LastName, message.Email, message.PhoneNumber);
             }
         }
         catch (Exception ex)
@@ -403,11 +456,12 @@ public class BotService
         }
     }
     
-    private async Task SendAccountApprovedMessage(long chatId, string firstName, string lastName, string email, string role)
+    private async Task SendAccountApprovedMessage(long chatId, string firstName, string lastName, string email, string role, string phoneNumber)
     {
         var messageText = $"🎉 Ваш аккаунт активирован!\n\n" +
                           $"👤 Пользователь: {firstName} {lastName}\n" +
                           $"📧 Email: {email}\n" +
+                          $"📞 Телефон: {phoneNumber}\n" +
                           $"🎯 Роль: {role}\n\n" +
                           $"✅ Теперь вы можете полноценно использовать все возможности системы.\n\n" +
                           $"Спасибо за регистрацию!";
@@ -415,15 +469,37 @@ public class BotService
         await SendMessage(chatId, messageText);
     }
 
-    private async Task SendAccountRejectedMessage(long chatId, string firstName, string lastName, string email)
+    private async Task SendAccountRejectedMessage(long chatId, string firstName, string lastName, string email, string phoneNumber)
     {
         var messageText = $"❌ Ваш аккаунт отклонен\n\n" +
                           $"👤 Пользователь: {firstName} {lastName}\n" +
-                          $"📧 Email: {email}\n\n" +
+                          $"📧 Email: {email}\n" +
+                          $"📞 Телефон: {phoneNumber}\n\n" +
                           $"⚠️ К сожалению, ваша регистрация не была одобрена администратором.\n\n" +
                           $"Если вы считаете, что это ошибка, пожалуйста, свяжитесь с поддержкой.";
 
         await SendMessage(chatId, messageText);
+    }
+
+    private async Task SendInfoMessage(Message message)
+    {
+        var from = message.From;
+        await SendMessage(message.Chat.Id, 
+            $"👤 Ваш ID: {from.Id}\n" +
+            $"📝 Username: @{from.Username}\n" +
+            $"👤 Имя: {from.FirstName}\n" +
+            $"💬 Chat ID: {message.Chat.Id}");
+        return;
+    }
+    
+    private async Task SendStartMessage(long chatId)
+    {
+        var message = "👋 Добро пожаловать в систему уведомлений СКФЭТ!\n\n" +
+                      $"📊 Давайте зарегистрируем вас в системе.\n\n" +
+                      "Выберите способ регистрации:\n" +
+                      "/registerAsStudent - зарегистрироваться как студент\n";
+        
+        await SendMessage(chatId, message);
     }
     
     private async Task SendMessage(long chatId, string message, ReplyMarkup? replyMarkup = null)
@@ -478,6 +554,22 @@ public class BotService
             return addr.Address == email;
         }
         catch
+        {
+            return false;
+        }
+    }
+    
+    private bool IsValidPhoneNumber(string phoneNumber)
+    {
+        try
+        {
+            var phoneUtil = PhoneNumberUtil.GetInstance();
+
+            var parsedNumber = phoneUtil.Parse(phoneNumber, null);
+        
+            return phoneUtil.IsValidNumber(parsedNumber);
+        }
+        catch (NumberParseException ex)
         {
             return false;
         }
