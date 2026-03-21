@@ -9,3 +9,5 @@ WebApi/Backups/*
 !WebApi/Backups/.gitkeep
 
 WebApi/uploads/Notifications/
+
+**/Migrations/*

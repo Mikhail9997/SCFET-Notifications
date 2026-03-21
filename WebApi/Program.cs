@@ -228,12 +228,16 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
     
     var retries = 5;
     while (retries > 0)
     {
         try
         {
+            // Заполняем seed данные
+            await SeedData.InitializeAsync(dbContext, env, logger);
+            
             await dbContext.Database.EnsureCreatedAsync();
             
             logger.LogInformation("Database created successfully");
