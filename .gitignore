@@ -10,4 +10,4 @@ WebApi/Backups/*
 
 WebApi/uploads/Notifications/
 
-**/Migrations/*
+ Infrastructure/Migrations/*
