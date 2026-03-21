@@ -253,11 +253,11 @@ public class UsersController: ControllerBase
 
         var user = await _userRepository.GetByIdAsync(_currentUserService.UserId.Value);
         if (user == null)
-            return NotFound(new { message = "Пользователь не найден" });
+            return NotFound(new { message = "Пользователь не найден", success=false });
 
         // Проверка уникальности email
         if (!await _userRepository.IsEmailUniqueAsync(updateDto.Email, user.Id))
-            return BadRequest(new { message = "Пользователь с таким email уже существует" });
+            return BadRequest(new { message = "Пользователь с таким email уже существует", success=false });
 
         user.FirstName = updateDto.FirstName;
         user.LastName = updateDto.LastName;
@@ -266,7 +266,7 @@ public class UsersController: ControllerBase
 
         await _userRepository.UpdateAsync(user);
 
-        return Ok(new { message = "Профиль успешно обновлен" });
+        return Ok(new { message = "Профиль успешно обновлен", success=true });
     }
     
     [Authorize(Roles = "Administrator")]

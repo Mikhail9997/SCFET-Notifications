@@ -71,5 +71,4 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
         return principal;
     }
-
 }
