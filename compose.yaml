@@ -212,7 +212,7 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=ru_RU.UTF-8'
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=ru_RU.UTF-8"
     networks:
       - scfet_network
     volumes:
@@ -226,8 +226,6 @@ services:
       resources:
         limits:
           memory: 512M
-    ports:
-      - "5433:5432"
     restart: unless-stopped
 
 networks:
