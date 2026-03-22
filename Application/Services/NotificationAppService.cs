@@ -74,7 +74,7 @@ public class NotificationAppService
             notification.Receivers.Add(new NotificationReceiver
             {
                 UserId = user.Id,
-                IsRead = false
+                IsRead = user.Id == senderId // отправитель сразу "прочитает" сообщение
             });
         }
 
