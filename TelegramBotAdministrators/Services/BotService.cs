@@ -300,6 +300,7 @@ public class BotService:IBotMessageSender
         {
             var profileMessage = $"👤 Ваш профиль:\n\n" +
                                  $"📧 Email: {userData.Email}\n" +
+                                 $"📞 Телефон: {userData.PhoneNumber}\n" +
                                  $"👤 Имя: {userData.FirstName}\n" +
                                  $"👤 Фамилия: {userData.LastName}\n" +
                                  $"🎯 Роль: {userData.Role}\n" +

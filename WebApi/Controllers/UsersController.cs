@@ -194,6 +194,50 @@ public class UsersController: ControllerBase
         }));
     }
     
+    [HttpGet("parents")]
+    [Authorize(Roles = "Administrator, Teacher")]
+    public async Task<IActionResult> GetParents([FromQuery] FilterDto query)
+    {
+        string cacheKey = $"parents_{JsonSerializer.Serialize(query)}";
+        int hours = int.Parse(_configuration["Redis:Hours"] ?? "1");
+        int minutes = int.Parse(_configuration["Redis:Minutes"] ?? "5");
+        
+        // Пытаемся взять из кэша
+        var cachedResult = await _redis.GetAsync<List<UserDto>>(cacheKey);
+        if (cachedResult != null && cachedResult.Any())
+        {
+            return Ok(cachedResult.Select(p => new
+            {
+                UserId = p.Id,
+                p.FirstName,
+                p.LastName,
+                p.Email,
+                p.PhoneNumber,
+                Role = p.Role.ToString()
+            }));
+        }
+        //сначала пытаемся взять из кеша всех родителей
+        List<User>? parents = await _redis.GetAsync<List<User>>("parents");
+        if (parents == null || !parents.Any())
+        {
+            parents = (List<User>)await _userRepository.GetUsersByRoleAsync(UserRole.Parent);
+            //Кешируем результат
+            await _redis.SetAsync("parents", _mapper.Map<List<UserDto>>(parents), TimeSpan.FromHours(hours));
+        }
+        parents = (List<User>)await _userRepository.FilterAsync(_mapper.Map<FilterEntity>(query), parents);
+        // Кешируем результат с фильтрацией
+        await _redis.SetAsync(cacheKey, _mapper.Map<List<UserDto>>(parents), TimeSpan.FromMinutes(minutes));
+        return Ok(parents.Select(p => new
+        {
+            UserId = p.Id,
+            p.FirstName,
+            p.LastName,
+            p.Email,
+            p.PhoneNumber,
+            Role = p.Role.ToString()
+        }));
+    }
+    
     [HttpGet("administrators-common")]
     public async Task<IActionResult> GetAdministratorsCommon()
     {
@@ -233,6 +277,23 @@ public class UsersController: ControllerBase
         var teachers = await _userRepository.GetUsersByRoleAsync(UserRole.Teacher);
         
         return Ok(teachers.Select(u => new UserCommonDto()
+        {
+            UserId = u.Id,
+            IsActive = u.IsActive,
+            FirstName = u.FirstName,
+            LastName = u.LastName,
+            PhoneNumber = u.PhoneNumber,
+            Email = u.Email,
+            ChatId = u.ChatId,
+        }));
+    }
+
+    [HttpGet("parents-common")]
+    public async Task<IActionResult> GetParentsCommon()
+    {
+        IReadOnlyList<User> parents = await _userRepository.GetUsersByRoleAsync(UserRole.Parent);
+        
+        return Ok(parents.Select(u => new UserCommonDto()
         {
             UserId = u.Id,
             IsActive = u.IsActive,
@@ -428,6 +489,9 @@ public class UsersController: ControllerBase
                 break;
             case UserRole.Administrator:
                 await _redis.RemoveAsync("admins");
+                break;
+            case UserRole.Parent:
+                await _redis.RemoveAsync("parents");
                 break;
         }
     }

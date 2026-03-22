@@ -116,10 +116,10 @@ public class AuthController: ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody]RegisterDto registerDto)
     {
-        // Для самостоятельной регистрации - только студенты
+        // Для самостоятельной регистрации - только студенты и родители
         // Администраторы могут регистрировать через другой метод
-        if (registerDto.Role != UserRole.Student)
-            return Forbid("Самостоятельная регистрация разрешена только для студентов");
+        if (registerDto.Role != UserRole.Student && registerDto.Role != UserRole.Parent)
+            return BadRequest(new { message = "Самостоятельная регистрация разрешена только для студентов и родителям" });
 
         var result = await _authService.RegisterAsync(registerDto, null);
 
@@ -131,7 +131,7 @@ public class AuthController: ControllerBase
             RegistrationResult.PasswordsDoNotMatch => BadRequest(new { message = "Пароли не совпадают" }),
             RegistrationResult.InvalidGroupAssignment => BadRequest(new { message = "Некорректное назначение группы" }),
             RegistrationResult.GroupNotFound => BadRequest(new { message = "Группа не найдена" }),
-            RegistrationResult.InsufficientPermissions => BadRequest(new { message = "Самостоятельная регистрация разрешена только студентам." }),
+            RegistrationResult.InsufficientPermissions => BadRequest(new { message = "Самостоятельная регистрация разрешена только студентам и родителям." }),
             RegistrationResult.DeviceTokenNullError => BadRequest(new {message = "Для студента нужно указать telegramId", Type = result}),
             RegistrationResult.DeviceTokenAlreadyExists => BadRequest(new {message = "Пользователь с таким telegramId уже существует", Type = result}),
             _ => BadRequest(new { message = "Ошибка регистрации" })

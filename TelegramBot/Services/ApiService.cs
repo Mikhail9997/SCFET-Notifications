@@ -15,7 +15,7 @@ public class ApiService
     {
         _baseUrl = baseUrl;
         _httpClient = new HttpClient();
-        _httpClient.Timeout = TimeSpan.FromSeconds(30);
+        _httpClient.Timeout = TimeSpan.FromSeconds(60);
     }
 
     public async Task<List<GroupResponse>?> GetGroupsAsync()
@@ -37,7 +37,7 @@ public class ApiService
         return null;
     }
 
-    public async Task<RegistrationResult> RegisterStudentAsync(RegisterRequest request)
+    public async Task<RegistrationResult> RegisterAsync(RegisterRequest request)
     {
         try
         {
@@ -113,7 +113,7 @@ public class ApiService
         }
         catch(Exception ex)
         {
-            return false;
+            return true;
         }
     }
     

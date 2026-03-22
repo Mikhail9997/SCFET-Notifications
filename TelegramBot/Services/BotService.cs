@@ -126,6 +126,9 @@ public class BotService
             case "/registerAsStudent":
                 await StartRegistration(chatId, UserRole.Student);
                 break;
+            case "/registerAsParent":
+                await StartRegistration(chatId, UserRole.Parent);
+                break;
             case "/info":
                 await SendInfoMessage(message);
                 break;
@@ -282,6 +285,7 @@ public class BotService
         }
         else
         {
+            _userStates[chatId].State = RegistrationState.Completed;
             await ProcessRegistration(chatId, userId);
         }
     }
@@ -352,7 +356,12 @@ public class BotService
 
     private async Task ProcessRegistration(long chatId, long userId)
     {
-        var userState = _userStates[chatId];
+        if (!_userStates.TryGetValue(chatId, out var userState))
+        {
+            _logger.LogWarning($"Registration state not found for chat {chatId}");
+            await SendMessage(chatId, "❌ Сессия регистрации истекла. Пожалуйста, начните заново с команды /start");
+            return;
+        }
         
         // Регистрируем пользователя
         var registerRequest = new RegisterRequest
@@ -369,21 +378,31 @@ public class BotService
             TelegramId = userId.ToString().ToLower()
         };
         
-        var registrationResult = await _apiService.RegisterStudentAsync(registerRequest);
+        var registrationResult = await _apiService.RegisterAsync(registerRequest);
         
         if (registrationResult == RegistrationResult.Success)
         {
-            await SendMessage(chatId,
-                $"🎉 Регистрация успешно завершена!\n\n" +
-                $"📧 Email: {userState.Email}\n" +
-                $"📞 Телефон: {userState.PhoneNumber}\n\n" +
-                $"👤 Имя: {userState.FirstName} {userState.LastName}\n" +
-                $"🎯 Группа: {userState.SelectedGroup!.Name}\n\n" +
-                $"📱 Вы можете войти в мобильное приложение СКФЭТ с вашими учетными данными после проверки администрации.\n\n" +
-                $"📲 Скачать приложение: {_appUrl}\n\n" +
-                $"🔐 Логин: {userState.Email}\n" +
-                $"🔑 Пароль: {userState.Password}\n\n" +
-                $"⚠️ Сохраните эти данные в надежном месте!");
+            var message = $"🎉 Регистрация успешно завершена!\n\n" +
+                          $"📧 Email: {userState.Email}\n" +
+                          $"📞 Телефон: {userState.PhoneNumber}\n" +
+                          $"👤 Имя: {userState.FirstName} {userState.LastName}\n";
+            
+            if (userState.SelectedGroup != null)
+            {
+                message += $"🎯 Группа: {userState.SelectedGroup.Name}\n\n";
+            }
+            else
+            {
+                message += "\n";
+            }
+        
+            message += $"📱 Вы можете войти в мобильное приложение СКФЭТ с вашими учетными данными после проверки администрации.\n\n" +
+                       $"📲 Скачать приложение: {_appUrl}\n\n" +
+                       $"🔐 Логин: {userState.Email}\n" +
+                       $"🔑 Пароль: {userState.Password}\n\n" +
+                       $"⚠️ Сохраните эти данные в надежном месте!";
+        
+            await SendMessage(chatId, message);
         }
         else
         {
@@ -497,7 +516,8 @@ public class BotService
         var message = "👋 Добро пожаловать в систему уведомлений СКФЭТ!\n\n" +
                       $"📊 Давайте зарегистрируем вас в системе.\n\n" +
                       "Выберите способ регистрации:\n" +
-                      "/registerAsStudent - зарегистрироваться как студент\n";
+                      "/registerAsStudent - зарегистрироваться как студент\n" +
+                      "/registerAsParent - зарегистрироваться как родитель";
         
         await SendMessage(chatId, message);
     }

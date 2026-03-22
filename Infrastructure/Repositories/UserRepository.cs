@@ -100,7 +100,7 @@ public class UserRepository : BaseRepository<User>, IUserRepository
     public async Task<bool> IsTelegramIdUniqueAsync(string token)
     {
         return !await _context.Users
-            .Where(u => u.Role == UserRole.Student)
+            .Where(u => u.Role == UserRole.Student || u.Role == UserRole.Parent)
             .AnyAsync(u => u.TelegramId != null && u.TelegramId.ToLower() == token.ToLower());
     }
     

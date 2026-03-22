@@ -291,12 +291,14 @@ public class NotificationAppService
         // Если конкретных целей нет, отправляем всем разрешенным пользователям в зависимости от роли
         return senderRole switch
         {
-            // Если учитель - отправка всем студентам и учителям
+            // Если учитель - отправка всем студентам и учителям и родителям
             UserRole.Teacher => (await _userRepository.GetUsersByRoleAsync(UserRole.Student))
+                .Concat(await _userRepository.GetUsersByRoleAsync(UserRole.Parent))
                 .Concat(await _userRepository.GetUsersByRoleAsync(UserRole.Teacher))
                 .ToList(),
-            // Если админ - отправка всем студентам и учителям, и администраторам
+            // Если админ - отправка всем студентам и учителям, и администраторам, и родителям
             UserRole.Administrator => (await _userRepository.GetUsersByRoleAsync(UserRole.Student))
+                .Concat(await _userRepository.GetUsersByRoleAsync(UserRole.Parent))
                 .Concat(await _userRepository.GetUsersByRoleAsync(UserRole.Teacher))
                 .Concat(await _userRepository.GetUsersByRoleAsync(UserRole.Administrator))
                 .ToList(),

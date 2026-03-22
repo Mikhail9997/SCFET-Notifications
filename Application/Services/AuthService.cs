@@ -97,7 +97,7 @@ public class AuthService
         };
     }
     
-    // регистрация для студентов
+    // регистрация для студентов и родителей
     public async Task<RegistrationResult> RegisterAsync(RegisterDto registerDto, Guid? currentUserId = null)
     {
         // Валидация пароля
@@ -108,7 +108,7 @@ public class AuthService
         if (!await _userRepository.IsEmailUniqueAsync(registerDto.Email))
             return RegistrationResult.EmailAlreadyExists;
         
-        //Проверка уникальности номера телефона для студентов
+        //Проверка уникальности номера телефона для студентов и родителям
         //(учителя и админы могут иметь одинаковые номера телефона)
         if (!await _userRepository.IsPhoneUniqueAsync(registerDto.PhoneNumber))
         {
@@ -125,7 +125,7 @@ public class AuthService
         else
         {
             // Самостоятельная регистрация разрешена только для студентов
-            if (registerDto.Role != UserRole.Student)
+            if (registerDto.Role != UserRole.Student && registerDto.Role != UserRole.Parent)
                 return RegistrationResult.InsufficientPermissions;
         }
 
@@ -140,13 +140,15 @@ public class AuthService
                 return RegistrationResult.GroupNotFound;
         }
 
-        //Валидация токена (студенты могут иметь только один аккаунт, а учителя несколько)
-        if(registerDto.Role == UserRole.Student && string.IsNullOrEmpty(registerDto.TelegramId))
+        //Валидация токена (студенты и родители могут иметь только один аккаунт, а учителя несколько)
+        if((registerDto.Role == UserRole.Student || registerDto.Role == UserRole.Parent)
+           && string.IsNullOrEmpty(registerDto.TelegramId))
         {
             return RegistrationResult.DeviceTokenNullError;
         }
 
-        if (!await _userRepository.IsTelegramIdUniqueAsync(registerDto.TelegramId) && registerDto.Role == UserRole.Student)
+        if (!await _userRepository.IsTelegramIdUniqueAsync(registerDto.TelegramId)
+            && (registerDto.Role == UserRole.Student || registerDto.Role == UserRole.Parent))
         {
             return RegistrationResult.DeviceTokenAlreadyExists;
         }
@@ -180,6 +182,9 @@ public class AuthService
                 break;
             case UserRole.Administrator:
                 await _redis.RemoveAsync("admins");
+                break;
+            case UserRole.Parent:
+                await _redis.RemoveAsync("parents");
                 break;
         }
 
