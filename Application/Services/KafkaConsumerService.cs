@@ -115,6 +115,8 @@ namespace Application.Services;
                                 Message = notificationMessage.Message,
                                 Type = notificationMessage.Type.ToString(),
                                 SenderName = notificationMessage.SenderName,
+                                SenderId = notificationMessage.SenderId,
+                                IsPersonal = notificationMessage.RecipientUserIds.Count == 1,
                                 CreatedAt = notificationMessage.CreatedAt,
                                 IsRead = false,
                                 ImageUrl = !string.IsNullOrEmpty(notificationMessage.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{notificationMessage.ImageUrl}" : null

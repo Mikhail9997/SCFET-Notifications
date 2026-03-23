@@ -9,6 +9,8 @@ public class NotificationDto
     public string Message { get; set; } = string.Empty;
     public string Type { get; set; }
     public string SenderName { get; set; } = string.Empty;
+    public Guid SenderId { get; set; }
+    public bool IsPersonal { get; set; }
     public DateTime CreatedAt { get; set; }
     public bool IsRead { get; set; }
     public string? ImageUrl { get; set; } = string.Empty;

@@ -60,7 +60,7 @@ public class NotificationsController:ControllerBase
     }
     
     [HttpPost]
-    [Authorize(Roles = "Teacher,Administrator")]
+    [Authorize]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> CreateNotification([FromForm] CreateNotificationDto request)
     {
@@ -161,7 +161,8 @@ public class NotificationsController:ControllerBase
     {
         if (!_currentUserService.UserId.HasValue)
             return Unauthorized();
-
+        Guid userId = _currentUserService.UserId.Value;
+        
         var pageResult = await _notificationRepository.GetUserNotificationsAsync(_currentUserService.UserId.Value,
             _mapper.Map<NotificationFilterEntity>(query));
 
@@ -174,6 +175,8 @@ public class NotificationsController:ControllerBase
                 Message = n.Message,
                 Type = n.Type.ToString(),
                 SenderName = $"{n.Sender.FirstName} {n.Sender.LastName}",
+                SenderId = n.SenderId,
+                IsPersonal = n.Receivers.Count == 1 && n.Receivers.Any(r => r.UserId == userId),
                 CreatedAt = n.CreatedAt,
                 IsRead = n.Receivers.FirstOrDefault(r => r.UserId == _currentUserService.UserId.Value)?.IsRead ?? false,
                 ImageUrl = !string.IsNullOrEmpty(n.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{n.ImageUrl}" : null

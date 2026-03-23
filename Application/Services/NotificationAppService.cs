@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Security.Authentication;
+using System.Text.Json;
 using Application.Common.Interfaces;
 using Application.DTOs;
 using Application.Exceptions;
@@ -88,6 +89,7 @@ public class NotificationAppService
             Message = notification.Message,
             Type = notification.Type,
             SenderName = $"{sender.FirstName} {sender.LastName}",
+            SenderId = senderId,
             RecipientUserIds = recipients.Select(r => r.Id).ToList(),
             CreatedAt = notification.CreatedAt,
             ImageUrl = string.IsNullOrEmpty(imageUrl) ? null : imageUrl
@@ -123,22 +125,28 @@ public class NotificationAppService
         
         var newReceiverIds = newReceivers.Select(r => r.Id).ToHashSet();
         
+        var existingReceiverIds = existingNotification.Receivers
+            .Select(r => r.UserId)
+            .ToHashSet();
+        
         // Обрабатываем получателей
         
         // Удаляем тех, кого больше нет
         var receiversToRemove = existingNotification.Receivers
             .Where(r => !newReceiverIds.Contains(r.UserId))
-            .ToList();
+            .ToHashSet();
             
         foreach (var receiver in receiversToRemove)
         {
             _context.NotificationReceivers.Remove(receiver);
         }
         
-        // Добавляем новых получателей
-        var existingReceiverIds = existingNotification.Receivers
-            .Select(r => r.UserId)
+        // Определяем существующих получателей, которые остаются (не удалены и не новые)
+        var existingReceiversThatStay = existingReceiverIds
+            .Where(id => newReceiverIds.Contains(id))
             .ToHashSet();
+        
+        // Добавляем новых получателей
             
         foreach (var userId in newReceiverIds)
         {
@@ -148,6 +156,7 @@ public class NotificationAppService
                 {
                     NotificationId = existingNotification.Id,
                     UserId = userId,
+                    IsRead = userId == senderId // отправитель сразу "прочитает" сообщение
                 };
                 _context.NotificationReceivers.Add(newReceiver);
             }
@@ -166,6 +175,7 @@ public class NotificationAppService
                 Message = existingNotification.Message,
                 Type = existingNotification.Type,
                 SenderName = $"{sender.FirstName} {sender.LastName}",
+                SenderId = senderId,
                 RecipientUserIds = newReceiverIds.ToList(),
                 CreatedAt = existingNotification.CreatedAt,
                 ImageUrl = existingNotification.ImageUrl
@@ -181,7 +191,7 @@ public class NotificationAppService
         }
         
         // Отправляем уведомление через SignalR для тех, у кого изменилось уведомление
-        await NotifyReceiversAboutUpdate(existingNotification.Id, existingNotification, newReceiverIds, sender);
+        await NotifyReceiversAboutUpdate(existingNotification.Id, existingNotification, existingReceiversThatStay, sender);
     }
     
     private async Task NotifyReceiversAboutUpdate(Guid notificationId, Notification notification, HashSet<Guid> receiverIds, User sender)
@@ -201,8 +211,11 @@ public class NotificationAppService
                             Message = notification.Message,
                             Type = notification.Type.ToString(),
                             SenderName = $"{sender.FirstName} {sender.LastName}",
+                            SenderId = notification.SenderId,
+                            IsPersonal = receiverIds.Count == 1,
                             CreatedAt = notification.CreatedAt,
-                            IsRead = false,
+                            IsRead = notification.Receivers
+                                .FirstOrDefault(r => r.UserId == receiverId)!.IsRead,
                             ImageUrl = !string.IsNullOrEmpty(notification.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{notification.ImageUrl}" : null
                         });
                 }
@@ -245,12 +258,31 @@ public class NotificationAppService
     
     private async Task ValidateNotificationPermissionsAsync(UserRole senderRole, CreateNotificationDto dto)
     {
+        if (senderRole == UserRole.Student || senderRole == UserRole.Parent)
+        {
+            // Студенты и Родители могут отправлять сообщение только одному учителю
+            if (dto.TargetUserIds != null && dto.TargetUserIds.Count == 1)
+            {
+                var targetUsers = await _userRepository.GetUsersByRoleAsync(UserRole.Teacher);
+                var invalidUsers = dto.TargetUserIds
+                    .Except(targetUsers.Select(t => t.Id));
+
+                if (!invalidUsers.Any())
+                {
+                    return;
+                }
+            }
+            throw new UnauthorizedAccessException(
+                "Студенты и Родители могут отправить уведомление только одному учителю");
+            
+        }
         if (senderRole == UserRole.Teacher)
         {
             // Учителя могут отправлять сообщения только учащимся и другим учителям
             if (dto.TargetUserIds != null && dto.TargetUserIds.Any())
             {
                 var targetUsers = (await _userRepository.GetUsersByRoleAsync(UserRole.Student))
+                    .Concat(await _userRepository.GetUsersByRoleAsync(UserRole.Parent))
                     .Concat(await _userRepository.GetUsersByRoleAsync(UserRole.Teacher));
                 var invalidUsers = dto.TargetUserIds.Except(targetUsers.Select(u => u.Id));
                 if (invalidUsers.Any())
