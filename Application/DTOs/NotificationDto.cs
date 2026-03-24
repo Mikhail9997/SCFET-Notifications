@@ -17,7 +17,7 @@ public class NotificationDto
     public string? ImageUrl { get; set; } = string.Empty;
 }
 
-public class GetNotificationDto<T>
+public class GetItemsDto<T>
 {
     public IReadOnlyList<T> Items { get; set; } 
     public int TotalCount { get; set; }

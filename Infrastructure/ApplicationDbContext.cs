@@ -11,6 +11,7 @@ namespace Infrastructure;
         public DbSet<User> Users => Set<User>();
         public DbSet<Group> Groups => Set<Group>();
         public DbSet<Notification> Notifications => Set<Notification>();
+        public DbSet<NotificationReply> NotificationReplies => Set<NotificationReply>();
         public DbSet<NotificationReceiver> NotificationReceivers => Set<NotificationReceiver>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -21,5 +22,6 @@ namespace Infrastructure;
             modelBuilder.ApplyConfiguration(new GroupConfiguration());
             modelBuilder.ApplyConfiguration(new NotificationConfiguration());
             modelBuilder.ApplyConfiguration(new NotificationReceiverConfiguration());
+            modelBuilder.ApplyConfiguration(new NotificationReplyConfiguration());
         }
     }

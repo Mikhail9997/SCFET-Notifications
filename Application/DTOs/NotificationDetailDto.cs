@@ -13,6 +13,5 @@ public class NotificationDetailDto
     public Guid SenderId { get; set; }
     public bool IsPersonal { get; set; }
     public DateTime CreatedAt { get; set; }
-    public List<NotificationReceiverDto> Receivers { get; set; } = new();
     public string? ImageUrl { get; set; } = string.Empty;
 }

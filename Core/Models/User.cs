@@ -19,6 +19,7 @@ public class User : BaseEntity
     // Навигация
     public ICollection<Notification> SentNotifications { get; set; } = new List<Notification>();
     public ICollection<NotificationReceiver> ReceivedNotifications { get; set; } = new List<NotificationReceiver>();
+    public ICollection<NotificationReply> Replies { get; set; } = new List<NotificationReply>();
 }
 
 public enum UserRole

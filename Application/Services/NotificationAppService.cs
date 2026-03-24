@@ -64,6 +64,7 @@ public class NotificationAppService
         {
             Title = dto.Title,
             Message = dto.Message,
+            AllowReplies = dto.AllowReplies,
             Type = dto.Type,
             SenderId = senderId,
             ImageUrl = string.IsNullOrEmpty(imageUrl) ? null : imageUrl
@@ -116,6 +117,7 @@ public class NotificationAppService
         // Обновляем основные поля
         existingNotification.Title = dto.Title;
         existingNotification.Message = dto.Message;
+        existingNotification.AllowReplies = dto.AllowReplies;
         existingNotification.Type = dto.Type;
         existingNotification.ImageUrl = imageUrl ?? existingNotification.ImageUrl;
         
