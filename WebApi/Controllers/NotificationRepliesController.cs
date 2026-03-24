@@ -59,7 +59,7 @@ public class NotificationRepliesController:ControllerBase
     }
     
     [HttpPost]
-    public async Task<ActionResult<ReplyDto>> CreateReply(CreateReplyDto dto)
+    public async Task<IActionResult> CreateReply(CreateReplyDto dto)
     {
         if (!_currentUserService.UserId.HasValue)
             return Unauthorized();
@@ -81,7 +81,7 @@ public class NotificationRepliesController:ControllerBase
     }
 
     [HttpPut("{id}/update")]
-    public async Task<ActionResult<ReplyDto>> UpdateReply(Guid id, UpdateNotificationReplyDto dto)
+    public async Task<IActionResult> UpdateReply(Guid id, UpdateNotificationReplyDto dto)
     {
         if (!_currentUserService.UserId.HasValue)
             return Unauthorized();

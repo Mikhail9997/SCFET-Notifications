@@ -213,13 +213,6 @@ public class NotificationsController:ControllerBase
             SenderId = notification.SenderId,
             IsPersonal = notification.Receivers.Count == 1 && notification.Receivers.Any(n => n.UserId == userId),
             CreatedAt = notification.CreatedAt,
-            Receivers = notification.Receivers.Select(r => new NotificationReceiverDto
-            {
-                UserId = r.UserId,
-                UserName = $"{r.User.FirstName} {r.User.LastName}",
-                Role = r.User.Role,
-                IsRead = r.IsRead
-            }).ToList(),
             ImageUrl = !string.IsNullOrEmpty(notification.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{notification.ImageUrl}" : null
         };
 
