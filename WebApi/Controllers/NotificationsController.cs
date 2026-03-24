@@ -179,6 +179,7 @@ public class NotificationsController:ControllerBase
                 SenderId = n.SenderId,
                 IsPersonal = n.Receivers.Count == 1 && n.Receivers.Any(r => r.UserId == userId),
                 CreatedAt = n.CreatedAt,
+                AllowReplies = n.AllowReplies,
                 IsRead = n.Receivers.FirstOrDefault(r => r.UserId == _currentUserService.UserId.Value)?.IsRead ?? false,
                 ImageUrl = !string.IsNullOrEmpty(n.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{n.ImageUrl}" : null
             }).ToList(),

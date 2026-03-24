@@ -117,6 +117,7 @@ namespace Application.Services;
                                 SenderName = notificationMessage.SenderName,
                                 SenderRole = notificationMessage.SenderRole,
                                 SenderId = notificationMessage.SenderId,
+                                AllowReplies = notificationMessage.AllowReplies,
                                 IsPersonal = notificationMessage.RecipientUserIds.Count == 1,
                                 CreatedAt = notificationMessage.CreatedAt,
                                 IsRead = false,

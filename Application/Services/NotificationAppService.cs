@@ -92,6 +92,7 @@ public class NotificationAppService
             SenderName = $"{sender.FirstName} {sender.LastName}",
             SenderRole = notification.Sender.Role.ToString(),
             SenderId = senderId,
+            AllowReplies = notification.AllowReplies,
             RecipientUserIds = recipients.Select(r => r.Id).ToList(),
             CreatedAt = notification.CreatedAt,
             ImageUrl = string.IsNullOrEmpty(imageUrl) ? null : imageUrl
@@ -180,6 +181,7 @@ public class NotificationAppService
                 SenderName = $"{sender.FirstName} {sender.LastName}",
                 SenderRole = existingNotification.Sender.Role.ToString(),
                 SenderId = senderId,
+                AllowReplies = existingNotification.AllowReplies,
                 RecipientUserIds = newReceiverIds.ToList(),
                 CreatedAt = existingNotification.CreatedAt,
                 ImageUrl = existingNotification.ImageUrl
@@ -217,6 +219,7 @@ public class NotificationAppService
                             SenderName = $"{sender.FirstName} {sender.LastName}",
                             SenderRole = notification.Sender.Role.ToString(),
                             SenderId = notification.SenderId,
+                            AllowReplies = notification.AllowReplies,
                             IsPersonal = newReceiverIds.Count == 1 && newReceiverIds.Contains(receiverId),
                             CreatedAt = notification.CreatedAt,
                             IsRead = notification.Receivers
