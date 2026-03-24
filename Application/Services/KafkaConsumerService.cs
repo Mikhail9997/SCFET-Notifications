@@ -115,6 +115,7 @@ namespace Application.Services;
                                 Message = notificationMessage.Message,
                                 Type = notificationMessage.Type.ToString(),
                                 SenderName = notificationMessage.SenderName,
+                                SenderRole = notificationMessage.SenderRole,
                                 SenderId = notificationMessage.SenderId,
                                 IsPersonal = notificationMessage.RecipientUserIds.Count == 1,
                                 CreatedAt = notificationMessage.CreatedAt,

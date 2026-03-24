@@ -89,6 +89,7 @@ public class NotificationAppService
             Message = notification.Message,
             Type = notification.Type,
             SenderName = $"{sender.FirstName} {sender.LastName}",
+            SenderRole = notification.Sender.Role.ToString(),
             SenderId = senderId,
             RecipientUserIds = recipients.Select(r => r.Id).ToList(),
             CreatedAt = notification.CreatedAt,
@@ -175,6 +176,7 @@ public class NotificationAppService
                 Message = existingNotification.Message,
                 Type = existingNotification.Type,
                 SenderName = $"{sender.FirstName} {sender.LastName}",
+                SenderRole = existingNotification.Sender.Role.ToString(),
                 SenderId = senderId,
                 RecipientUserIds = newReceiverIds.ToList(),
                 CreatedAt = existingNotification.CreatedAt,
@@ -191,15 +193,15 @@ public class NotificationAppService
         }
         
         // Отправляем уведомление через SignalR для тех, у кого изменилось уведомление
-        await NotifyReceiversAboutUpdate(existingNotification.Id, existingNotification, existingReceiversThatStay, sender);
+        await NotifyReceiversAboutUpdate(existingNotification.Id, existingNotification, existingReceiversThatStay, newReceiverIds, sender);
     }
     
-    private async Task NotifyReceiversAboutUpdate(Guid notificationId, Notification notification, HashSet<Guid> receiverIds, User sender)
+    private async Task NotifyReceiversAboutUpdate(Guid notificationId, Notification notification, HashSet<Guid> receiverThatStayIds, HashSet<Guid> newReceiverIds, User sender)
     {
         try
         {
             var hubContext = _serviceProvider.GetRequiredService<IHubContext<NotificationHub>>();
-            foreach (var receiverId in receiverIds)
+            foreach (var receiverId in receiverThatStayIds)
             {
                 try
                 {
@@ -211,8 +213,9 @@ public class NotificationAppService
                             Message = notification.Message,
                             Type = notification.Type.ToString(),
                             SenderName = $"{sender.FirstName} {sender.LastName}",
+                            SenderRole = notification.Sender.Role.ToString(),
                             SenderId = notification.SenderId,
-                            IsPersonal = receiverIds.Count == 1,
+                            IsPersonal = newReceiverIds.Count == 1 && newReceiverIds.Contains(receiverId),
                             CreatedAt = notification.CreatedAt,
                             IsRead = notification.Receivers
                                 .FirstOrDefault(r => r.UserId == receiverId)!.IsRead,
@@ -258,24 +261,6 @@ public class NotificationAppService
     
     private async Task ValidateNotificationPermissionsAsync(UserRole senderRole, CreateNotificationDto dto)
     {
-        if (senderRole == UserRole.Student || senderRole == UserRole.Parent)
-        {
-            // Студенты и Родители могут отправлять сообщение только одному учителю
-            if (dto.TargetUserIds != null && dto.TargetUserIds.Count == 1)
-            {
-                var targetUsers = await _userRepository.GetUsersByRoleAsync(UserRole.Teacher);
-                var invalidUsers = dto.TargetUserIds
-                    .Except(targetUsers.Select(t => t.Id));
-
-                if (!invalidUsers.Any())
-                {
-                    return;
-                }
-            }
-            throw new UnauthorizedAccessException(
-                "Студенты и Родители могут отправить уведомление только одному учителю");
-            
-        }
         if (senderRole == UserRole.Teacher)
         {
             // Учителя могут отправлять сообщения только учащимся и другим учителям

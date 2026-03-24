@@ -60,7 +60,7 @@ public class NotificationsController:ControllerBase
     }
     
     [HttpPost]
-    [Authorize]
+    [Authorize(Roles = "Teacher,Administrator")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> CreateNotification([FromForm] CreateNotificationDto request)
     {
@@ -175,6 +175,7 @@ public class NotificationsController:ControllerBase
                 Message = n.Message,
                 Type = n.Type.ToString(),
                 SenderName = $"{n.Sender.FirstName} {n.Sender.LastName}",
+                SenderRole = n.Sender.Role.ToString(),
                 SenderId = n.SenderId,
                 IsPersonal = n.Receivers.Count == 1 && n.Receivers.Any(r => r.UserId == userId),
                 CreatedAt = n.CreatedAt,
@@ -189,9 +190,14 @@ public class NotificationsController:ControllerBase
         return Ok(result);
     }
 
+    [Authorize]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetNotificationById(Guid id)
     {
+        if (!_currentUserService.UserId.HasValue)
+            return Unauthorized();
+        Guid userId = _currentUserService.UserId.Value;
+        
         var notification = await _notificationRepository.GetByIdAsync(id);
         if (notification == null)
             return NotFound(new { message = "Уведомление не найдено" });
@@ -203,7 +209,9 @@ public class NotificationsController:ControllerBase
             Message = notification.Message,
             Type = notification.Type,
             SenderName = $"{notification.Sender.FirstName} {notification.Sender.LastName}",
+            SenderRole = notification.Sender.Role.ToString(),
             SenderId = notification.SenderId,
+            IsPersonal = notification.Receivers.Count == 1 && notification.Receivers.Any(n => n.UserId == userId),
             CreatedAt = notification.CreatedAt,
             Receivers = notification.Receivers.Select(r => new NotificationReceiverDto
             {
