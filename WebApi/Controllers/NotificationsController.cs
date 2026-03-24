@@ -166,7 +166,7 @@ public class NotificationsController:ControllerBase
         var pageResult = await _notificationRepository.GetUserNotificationsAsync(_currentUserService.UserId.Value,
             _mapper.Map<NotificationFilterEntity>(query));
 
-        var result = new GetNotificationDto<NotificationDto>()
+        var result = new GetItemsDto<NotificationDto>()
         {
             Items = pageResult.Items.Select(n => new NotificationDto
             {
@@ -273,7 +273,7 @@ public class NotificationsController:ControllerBase
                 ImageUrl = !string.IsNullOrEmpty(n.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{n.ImageUrl}" : null
             }).ToList();
 
-        var result = new GetNotificationDto<SentNotificationDto>()
+        var result = new GetItemsDto<SentNotificationDto>()
         {
             Items = sentNotifications,
             Page = pagedResult.Page,

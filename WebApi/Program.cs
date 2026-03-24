@@ -165,6 +165,7 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(BaseRepository<>));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IGroupRepository, GroupRepository>();
+builder.Services.AddScoped<INotificationReplyRepository, NotificationReplyRepository>();
 
 // Services
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -177,6 +178,7 @@ builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 // Application Services
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<NotificationAppService>();
+builder.Services.AddScoped<NotificationReplyService>();
 builder.Services.AddScoped<FileService>();
 builder.Services.AddSingleton<RedisService>();
 builder.Services.AddScoped<IDatabaseBackupService, DockerBackupUniversalService>();
