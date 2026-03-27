@@ -239,9 +239,9 @@ public class BotService
     
     private async Task ProcessFirstName(long chatId, string firstName)
     {
-        if (string.IsNullOrWhiteSpace(firstName) || firstName.Length < 2)
+        if (string.IsNullOrWhiteSpace(firstName) || firstName.Length < 2 || firstName.Length > 50)
         {
-            await SendMessage(chatId, "❌ Имя должно содержать хотя бы 2 символа. Пожалуйста, введите ваше имя:");
+            await SendMessage(chatId, "❌ Имя должно содержать не менее 2 символа и не более 50 символов. Пожалуйста, введите ваше имя:");
             return;
         }
 
@@ -253,9 +253,9 @@ public class BotService
 
     private async Task ProcessLastName(long chatId, string lastName)
     {
-        if (string.IsNullOrWhiteSpace(lastName) || lastName.Length < 2)
+        if (string.IsNullOrWhiteSpace(lastName) || lastName.Length < 2 || lastName.Length > 50)
         {
-            await SendMessage(chatId, "❌ Фамилия должна содержать хотя бы 2 символа. Пожалуйста, введите вашу фамилию:");
+            await SendMessage(chatId, "❌ Фамилия должна содержать не менее 2 символа и не более 50 символов. Пожалуйста, введите вашу фамилию:");
             return;
         }
         
