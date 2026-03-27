@@ -3,6 +3,7 @@ using Application.DTOs;
 using Application.Exceptions;
 using Application.Hubs;
 using Application.Services;
+using Application.Utils;
 using AutoMapper;
 using Core.Interfaces;
 using Core.Models;
@@ -161,9 +162,9 @@ public class NotificationsController:ControllerBase
     {
         if (!_currentUserService.UserId.HasValue)
             return Unauthorized();
-        Guid userId = _currentUserService.UserId.Value;
+        Guid currentUserId = _currentUserService.UserId.Value;
         
-        var pageResult = await _notificationRepository.GetUserNotificationsAsync(_currentUserService.UserId.Value,
+        var pageResult = await _notificationRepository.GetUserNotificationsAsync(currentUserId,
             _mapper.Map<NotificationFilterEntity>(query));
 
         var result = new GetItemsDto<NotificationDto>()
@@ -177,10 +178,11 @@ public class NotificationsController:ControllerBase
                 SenderName = $"{n.Sender.FirstName} {n.Sender.LastName}",
                 SenderRole = n.Sender.Role.ToString(),
                 SenderId = n.SenderId,
-                IsPersonal = n.Receivers.Count == 1 && n.Receivers.Any(r => r.UserId == userId),
+                IsPersonal = NotificationUtils
+                    .IsPersonal(n.Receivers.Select(r => r.UserId).ToHashSet(), currentUserId),
                 CreatedAt = n.CreatedAt,
                 AllowReplies = n.AllowReplies,
-                IsRead = n.Receivers.FirstOrDefault(r => r.UserId == _currentUserService.UserId.Value)?.IsRead ?? false,
+                IsRead = n.Receivers.FirstOrDefault(r => r.UserId == currentUserId)?.IsRead ?? false,
                 ImageUrl = !string.IsNullOrEmpty(n.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{n.ImageUrl}" : null
             }).ToList(),
             TotalCount = pageResult.TotalCount,
@@ -197,7 +199,7 @@ public class NotificationsController:ControllerBase
     {
         if (!_currentUserService.UserId.HasValue)
             return Unauthorized();
-        Guid userId = _currentUserService.UserId.Value;
+        Guid currentUserId = _currentUserService.UserId.Value;
         
         var notification = await _notificationRepository.GetByIdAsync(id);
         if (notification == null)
@@ -212,8 +214,17 @@ public class NotificationsController:ControllerBase
             SenderName = $"{notification.Sender.FirstName} {notification.Sender.LastName}",
             SenderRole = notification.Sender.Role.ToString(),
             SenderId = notification.SenderId,
-            IsPersonal = notification.Receivers.Count == 1 && notification.Receivers.Any(n => n.UserId == userId),
+            AllowReplies = notification.AllowReplies,
+            IsPersonal = NotificationUtils
+                .IsPersonal(notification.Receivers.Select(r => r.UserId).ToHashSet(), currentUserId),
             CreatedAt = notification.CreatedAt,
+            Receivers = notification.Receivers.Select(r => new NotificationReceiverDto
+            {
+                UserId = r.UserId,
+                UserName = $"{r.User.FirstName} {r.User.LastName}",
+                Role = r.User.Role,
+                IsRead = r.IsRead
+            }).ToList(),
             ImageUrl = !string.IsNullOrEmpty(notification.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{notification.ImageUrl}" : null
         };
 
@@ -249,7 +260,8 @@ public class NotificationsController:ControllerBase
     {
         if (!_currentUserService.UserId.HasValue)
             return Unauthorized();
-
+        Guid currentUserId = _currentUserService.UserId.Value;
+        
         var pagedResult = await _notificationRepository.GetBySenderIdAsync(_currentUserService.UserId.Value, 
             _mapper.Map<NotificationFilterEntity>(query));
         
@@ -262,8 +274,11 @@ public class NotificationsController:ControllerBase
                 Message = n.Message,
                 Type = n.Type,
                 CreatedAt = n.CreatedAt,
-                TotalReceivers = n.Receivers.Count,
-                ReadReceivers = n.Receivers.Count(r => r.IsRead),
+                IsPersonal = NotificationUtils
+                    .IsPersonal(n.Receivers.Select(r => r.UserId).ToHashSet(), currentUserId),
+                AllowReplies = n.AllowReplies,
+                TotalReceivers = n.Receivers.Count(r => r.UserId != currentUserId),
+                ReadReceivers = n.Receivers.Count(r => r.IsRead && r.UserId != currentUserId),
                 ImageUrl = !string.IsNullOrEmpty(n.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{n.ImageUrl}" : null
             }).ToList();
 

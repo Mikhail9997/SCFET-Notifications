@@ -14,6 +14,7 @@ public class NotificationReplyRepository:BaseRepository<NotificationReply>, INot
     {
         return await _context.NotificationReplies
             .Include(nr => nr.Notification)
+            .ThenInclude(n => n.Receivers)
             .Include(nr => nr.User)
             .FirstOrDefaultAsync(nr => nr.Id == id);
     }

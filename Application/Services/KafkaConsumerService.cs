@@ -2,6 +2,7 @@
 using Application.DTOs;
 using Application.Hubs;
 using Application.Messages.Kafka;
+using Application.Utils;
 using Confluent.Kafka;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
@@ -118,7 +119,8 @@ namespace Application.Services;
                                 SenderRole = notificationMessage.SenderRole,
                                 SenderId = notificationMessage.SenderId,
                                 AllowReplies = notificationMessage.AllowReplies,
-                                IsPersonal = notificationMessage.RecipientUserIds.Count == 1,
+                                IsPersonal = NotificationUtils
+                                    .IsPersonal(notificationMessage.RecipientUserIds.ToHashSet(), userId),
                                 CreatedAt = notificationMessage.CreatedAt,
                                 IsRead = false,
                                 ImageUrl = !string.IsNullOrEmpty(notificationMessage.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{notificationMessage.ImageUrl}" : null

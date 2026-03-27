@@ -5,6 +5,7 @@ using Application.DTOs;
 using Application.Exceptions;
 using Application.Hubs;
 using Application.Messages.Kafka;
+using Application.Utils;
 using Core.Interfaces;
 using Core.Models;
 using Infrastructure;
@@ -54,7 +55,7 @@ public class NotificationAppService
         await ValidateNotificationPermissionsAsync(sender.Role, dto);
 
         // Берем целевых пользователей
-        var recipients = await GetRecipientsAsync(dto, sender.Role);
+        var recipients = await GetRecipientsAsync(dto, sender);
         
         if (!recipients.Any())
             throw new InvalidOperationException("Получатели уведомления не найдены");
@@ -69,7 +70,7 @@ public class NotificationAppService
             SenderId = senderId,
             ImageUrl = string.IsNullOrEmpty(imageUrl) ? null : imageUrl
         };
-
+        
         // Добавление получателей
         foreach (var user in recipients)
         {
@@ -123,7 +124,7 @@ public class NotificationAppService
         existingNotification.ImageUrl = imageUrl ?? existingNotification.ImageUrl;
         
         // Получаем новых получателей
-        var newReceivers = await GetRecipientsAsync(dto, sender.Role);
+        var newReceivers = await GetRecipientsAsync(dto, sender);
         if (!newReceivers.Any())
             throw new InvalidOperationException("Получатели уведомления не найдены");
         
@@ -151,7 +152,6 @@ public class NotificationAppService
             .ToHashSet();
         
         // Добавляем новых получателей
-            
         foreach (var userId in newReceiverIds)
         {
             if (!existingReceiverIds.Contains(userId))
@@ -220,7 +220,8 @@ public class NotificationAppService
                             SenderRole = notification.Sender.Role.ToString(),
                             SenderId = notification.SenderId,
                             AllowReplies = notification.AllowReplies,
-                            IsPersonal = newReceiverIds.Count == 1 && newReceiverIds.Contains(receiverId),
+                            IsPersonal = NotificationUtils
+                                .IsPersonal(notification.Receivers.Select(r => r.UserId).ToHashSet(), receiverId),
                             CreatedAt = notification.CreatedAt,
                             IsRead = notification.Receivers
                                 .FirstOrDefault(r => r.UserId == receiverId)!.IsRead,
@@ -268,7 +269,7 @@ public class NotificationAppService
     {
         if (senderRole == UserRole.Teacher)
         {
-            // Учителя могут отправлять сообщения только учащимся и другим учителям
+            // Учителя могут отправлять сообщения только учащимся, родителям и другим учителям
             if (dto.TargetUserIds != null && dto.TargetUserIds.Any())
             {
                 var targetUsers = (await _userRepository.GetUsersByRoleAsync(UserRole.Student))
@@ -290,15 +291,23 @@ public class NotificationAppService
         // Администраторы могут отправлять сообщения кому угодно - никаких ограничений
     }
     
-    private async Task<List<User>> GetRecipientsAsync(NotificationActionDto dto, UserRole senderRole)
+    private async Task<List<User>> GetRecipientsAsync(NotificationActionDto dto, User sender)
     {
+        // Определение получателей для уведомления.
+        // Отправитель тоже попадает в список получателей.
+        UserRole senderRole = sender.Role;
         if (dto.TargetUserIds != null && dto.TargetUserIds.Any())
         {
+            var targetUserIds = dto.TargetUserIds?.ToHashSet();
             var recipients = new List<User>();
             foreach (var userId in dto.TargetUserIds)
             {
                 var user = await _userRepository.GetByIdAsync(userId);
                 if (user != null) recipients.Add(user);
+            }
+            if(!targetUserIds.Contains(sender.Id))
+            {
+                recipients.Add(sender);
             }
             return recipients;
         }
@@ -307,7 +316,9 @@ public class NotificationAppService
         {
             var group = await _groupRepository.GetByIdAsync(dto.TargetGroupId.Value);
             if (group == null) throw new GroupNotFoundException("Группа не найдена");
-            return (await _userRepository.GetUsersByGroupAsync(dto.TargetGroupId.Value)).ToList();
+            var recipients = (await _userRepository.GetUsersByGroupAsync(dto.TargetGroupId.Value)).ToList();
+            recipients.Add(sender);
+            return recipients;
         }
 
         // Если конкретных целей нет, отправляем всем разрешенным пользователям в зависимости от роли
