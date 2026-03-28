@@ -18,7 +18,7 @@ namespace WebApi.Controllers;
 [Authorize]
 public class NotificationsController:ControllerBase
 {
-    private readonly IWebHostEnvironment _environment;
+
     private readonly FileService _fileService;
     private readonly NotificationAppService _notificationService;
     private readonly INotificationRepository _notificationRepository;
@@ -44,14 +44,13 @@ public class NotificationsController:ControllerBase
         _notificationRepository = notificationRepository;
         _currentUserService = currentUserService;
         _mapper = mapper;
-        _environment = environment;
         _fileService = fileService;
         _configuration = configuration;
         _serviceProvider = serviceProvider;
         _logger = logger;
 
         // Определяем папку для загрузок относительно корня приложения
-        _uploadsFolder = Path.Combine(_environment.ContentRootPath, "uploads", "Notifications");
+        _uploadsFolder = Path.Combine(environment.ContentRootPath, "uploads", "Notifications");
         
         // Создаем папку если не существует
         if (!Directory.Exists(_uploadsFolder))
@@ -120,7 +119,7 @@ public class NotificationsController:ControllerBase
                 // Если уведомление имеет изображение - удаляем
                 if (!string.IsNullOrEmpty(notification.ImageUrl))
                 {
-                    await _fileService.DeleteNotificationImagesAsync(notification.ImageUrl, _uploadsFolder);
+                    await _fileService.DeleteImageAsync(notification.ImageUrl, _uploadsFolder);
                 }
                 // Добавляем новое изображение уведомлению если они не одинаковые
                 var fileName1 = request.Image.FileName;
@@ -308,7 +307,7 @@ public class NotificationsController:ControllerBase
             // Удаляем изображения если имеются
             if (notification.ImageUrl != null)
             {
-                await _fileService.DeleteNotificationImagesAsync(notification.ImageUrl, _uploadsFolder);
+                await _fileService.DeleteImageAsync(notification.ImageUrl, _uploadsFolder);
             }
             await _notificationRepository.DeleteAsync(notification);
             

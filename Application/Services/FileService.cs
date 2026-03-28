@@ -34,10 +34,12 @@ public class FileService
             await image.CopyToAsync(stream);
         }
 
-        return $"/uploads/Notifications/{fileName}";
+        // Получаем относительный путь
+        string result = GetRelativePath(filePath);
+        return result;
     }
     
-    public async Task DeleteNotificationImagesAsync(string imageUrl, string uploadsFolder)
+    public async Task DeleteImageAsync(string imageUrl, string uploadsFolder)
     {
        
         try
@@ -83,7 +85,7 @@ public class FileService
             return false;
         }
     }
-
+    
     public bool IsImagesEquals(string fileName1, string fileName2)
     {
         if (fileName1.Equals(fileName2)) return true;
@@ -93,5 +95,31 @@ public class FileService
     private bool IsInAllowedDirectory(string filePath, string uploadsFolder)
     {
         return filePath.StartsWith(uploadsFolder);
+    }
+
+    private string GetRelativePath(string fullPath)
+    {
+        string normalizedPath = fullPath.Replace('\\', '/');
+        string[] folders = normalizedPath.Split('/');
+    
+        Stack<string> uploadsFolders = new();
+        bool foundUploads = false;
+        
+        for (int i = folders.Length - 1; i >= 0; i--)
+        {
+            uploadsFolders.Push(folders[i]);
+        
+            if (folders[i].Equals("uploads", StringComparison.OrdinalIgnoreCase))
+            {
+                foundUploads = true;
+                break;
+            }
+        }
+        // Формируем путь, начинающийся с "uploads"
+        string relativePath = foundUploads 
+            ? string.Join("/", uploadsFolders) 
+            : normalizedPath;
+        
+        return relativePath.StartsWith("/") ? relativePath : $"/{relativePath}";
     }
 }

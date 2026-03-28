@@ -40,6 +40,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.TelegramId)
             .HasMaxLength(500);
+
+        builder.Property(u => u.AvatarUrl)
+            .HasMaxLength(500);
         
         builder.Property(u => u.CreatedAt)
             .HasColumnType("timestamp with time zone");
