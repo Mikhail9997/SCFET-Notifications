@@ -211,6 +211,14 @@ if (!Directory.Exists(uploadsPath))
     Console.WriteLine($"Created uploads directory at: {uploadsPath}");
 }
 
+// Создаем директорию avatars, если ее нет
+var avatarsPath = Path.Combine(app.Environment.ContentRootPath, "avatars");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(avatarsPath);
+    Console.WriteLine($"Created avatars directory at: {avatarsPath}");
+}
+
 app.UseCors("AllowAll");
 
 // Разрешаем доступ к статическим файлам

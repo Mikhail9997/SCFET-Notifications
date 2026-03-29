@@ -11,6 +11,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./WebApi/uploads:/app/uploads
       - ./WebApi/Backups:/app/Backups
+      - ./WebApi/avatars:/app/avatars
     user: root
     environment:
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${DB_NAME};Username=postgres;Password=${DB_PASSWORD}

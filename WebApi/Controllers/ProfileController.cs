@@ -23,14 +23,7 @@ public class ProfileController:ControllerBase
         _currentUserService = currentUserService;
         _avatarService = avatarService;
 
-        // Определяем папку для загрузок относительно корня приложения
-        string uploadsFolder = Path.Combine(environment.ContentRootPath, "uploads", "avatars");
-        
-        // Создаем папку если не существует
-        if (!Directory.Exists(uploadsFolder))
-        {
-            Directory.CreateDirectory(uploadsFolder);
-        }
+
     }
 
     [HttpPost("uploadAvatar")]
