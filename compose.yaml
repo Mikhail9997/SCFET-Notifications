@@ -17,7 +17,7 @@ services:
       - Kafka__BootstrapServers=kafka:9092
       - Redis__ConnectionStrings=redis-cache:6379,password=${Redis_PASSWORD},abortConnect=false,connectTimeout=5000,syncTimeout=5000
       - JwtSettings__Secret=${JWT_Secret}
-      - CloudPud__Ip=${Host_Base_Url}
+      - BaseUrl=${Host_Base_Url}
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://0.0.0.0:8080
       - DOCKER_NETWORK=scfet_network

@@ -41,7 +41,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.TelegramId)
             .HasMaxLength(500);
 
-        builder.Property(u => u.AvatarUrl)
+        builder.Property(u => u.AvatarPresetKey)
             .HasMaxLength(500);
         
         builder.Property(u => u.CreatedAt)

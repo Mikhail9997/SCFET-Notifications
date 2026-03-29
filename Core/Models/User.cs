@@ -11,7 +11,7 @@ public class User : BaseEntity
     public string? TelegramId { get; set; }
     public string? ChatId { get; set; }
     public string? RefreshToken { get; set; }
-    public string? AvatarUrl { get; set; }
+    public string? AvatarPresetKey  { get; set; }
     public bool IsActive { get; set; }
     public UserRole Role { get; set; }
     public Guid? GroupId { get; set; }

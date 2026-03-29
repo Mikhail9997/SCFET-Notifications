@@ -25,9 +25,10 @@ public class NotificationsController:ControllerBase
     private readonly ICurrentUserService _currentUserService;
     private readonly IConfiguration _configuration;
     private readonly IMapper _mapper;
-    private readonly string _uploadsFolder;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IAvatarService _avatarService;
     private readonly ILogger<NotificationsController> _logger;
+    private readonly string _uploadsFolder;
 
     public NotificationsController(
         NotificationAppService notificationService,
@@ -38,7 +39,8 @@ public class NotificationsController:ControllerBase
         FileService fileService, 
         IConfiguration configuration, 
         IServiceProvider serviceProvider, 
-        ILogger<NotificationsController> logger)
+        ILogger<NotificationsController> logger,
+        IAvatarService avatarService)
     {
         _notificationService = notificationService;
         _notificationRepository = notificationRepository;
@@ -48,6 +50,7 @@ public class NotificationsController:ControllerBase
         _configuration = configuration;
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _avatarService = avatarService;
 
         // Определяем папку для загрузок относительно корня приложения
         _uploadsFolder = Path.Combine(environment.ContentRootPath, "uploads", "Notifications");
@@ -166,9 +169,9 @@ public class NotificationsController:ControllerBase
         var pageResult = await _notificationRepository.GetUserNotificationsAsync(currentUserId,
             _mapper.Map<NotificationFilterEntity>(query));
 
-        var result = new GetItemsDto<NotificationDto>()
+        var result = new GetItemsDto<Task<NotificationDto>>()
         {
-            Items = pageResult.Items.Select(n => new NotificationDto
+            Items = pageResult.Items.Select(async (n) => new NotificationDto
             {
                 Id = n.Id,
                 Title = n.Title,
@@ -176,13 +179,14 @@ public class NotificationsController:ControllerBase
                 Type = n.Type.ToString(),
                 SenderName = $"{n.Sender.FirstName} {n.Sender.LastName}",
                 SenderRole = n.Sender.Role.ToString(),
+                SenderAvatarUrl = await _avatarService.GetAvatarUrl(n.Sender.AvatarPresetKey),
                 SenderId = n.SenderId,
                 IsPersonal = NotificationUtils
                     .IsPersonal(n.Receivers.Select(r => r.UserId).ToHashSet(), currentUserId),
                 CreatedAt = n.CreatedAt,
                 AllowReplies = n.AllowReplies,
                 IsRead = n.Receivers.FirstOrDefault(r => r.UserId == currentUserId)?.IsRead ?? false,
-                ImageUrl = !string.IsNullOrEmpty(n.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{n.ImageUrl}" : null
+                ImageUrl = !string.IsNullOrEmpty(n.ImageUrl) ? $"{_configuration["BaseUrl"]}{n.ImageUrl}" : null
             }).ToList(),
             TotalCount = pageResult.TotalCount,
             Page = pageResult.Page,
@@ -212,6 +216,7 @@ public class NotificationsController:ControllerBase
             Type = notification.Type,
             SenderName = $"{notification.Sender.FirstName} {notification.Sender.LastName}",
             SenderRole = notification.Sender.Role.ToString(),
+            SenderAvatarUrl = await _avatarService.GetAvatarUrl(notification.Sender.AvatarPresetKey),
             SenderId = notification.SenderId,
             AllowReplies = notification.AllowReplies,
             IsPersonal = NotificationUtils
@@ -224,7 +229,7 @@ public class NotificationsController:ControllerBase
                 Role = r.User.Role,
                 IsRead = r.IsRead
             }).ToList(),
-            ImageUrl = !string.IsNullOrEmpty(notification.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{notification.ImageUrl}" : null
+            ImageUrl = !string.IsNullOrEmpty(notification.ImageUrl) ? $"{_configuration["BaseUrl"]}{notification.ImageUrl}" : null
         };
 
         return Ok(result);
@@ -278,7 +283,7 @@ public class NotificationsController:ControllerBase
                 AllowReplies = n.AllowReplies,
                 TotalReceivers = n.Receivers.Count(r => r.UserId != currentUserId),
                 ReadReceivers = n.Receivers.Count(r => r.IsRead && r.UserId != currentUserId),
-                ImageUrl = !string.IsNullOrEmpty(n.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{n.ImageUrl}" : null
+                ImageUrl = !string.IsNullOrEmpty(n.ImageUrl) ? $"{_configuration["BaseUrl"]}{n.ImageUrl}" : null
             }).ToList();
 
         var result = new GetItemsDto<SentNotificationDto>()

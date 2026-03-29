@@ -21,9 +21,11 @@ public class UsersController: ControllerBase
     private readonly IKafkaProducer _producer;
     private readonly IConfiguration _configuration;
     private readonly RedisService _redis;
+    private readonly IAvatarService _avatarService;
 
     public UsersController(IUserRepository userRepository, ICurrentUserService currentUserService, 
-        IMapper mapper, IKafkaProducer producer, IConfiguration configuration, RedisService redis)
+        IMapper mapper, IKafkaProducer producer, IConfiguration configuration,
+        RedisService redis, IAvatarService avatarService)
     {
         _userRepository = userRepository;
         _currentUserService = currentUserService;
@@ -31,6 +33,7 @@ public class UsersController: ControllerBase
         _producer = producer;
         _configuration = configuration;
         _redis = redis;
+        _avatarService = avatarService;
     }
 
     [Authorize]
@@ -40,21 +43,14 @@ public class UsersController: ControllerBase
         if (!_currentUserService.UserId.HasValue)
             return Unauthorized();
 
-        var user = await _userRepository.GetByIdAsync(_currentUserService.UserId.Value);
+        User? user = await _userRepository.GetByIdAsync(_currentUserService.UserId.Value);
         if (user == null)
             return NotFound(new { message = "Пользователь не найден" });
 
-        return Ok(new
-        {
-            user.Id,
-            user.Email,
-            user.FirstName,
-            user.LastName,
-            user.PhoneNumber,
-            Role = user.Role.ToString(),
-            Group = user.Group?.Name,
-            GroupId = user.GroupId
-        });
+        var profileDto = _mapper.Map<ProfileDto>(user);
+        profileDto.AvatarUrl = await _avatarService.GetAvatarUrl(user.AvatarPresetKey);
+        
+        return Ok(profileDto);
     }
     
     [HttpGet("students")]

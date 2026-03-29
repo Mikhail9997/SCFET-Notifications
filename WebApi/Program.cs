@@ -42,7 +42,8 @@ builder.Configuration.AddEnvironmentVariables();
 // Add services
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
-builder.Services.AddAutoMapper(cfg => { }, typeof(FilterProfile), typeof(NotificationFilterProfile), typeof(UserProfile));
+builder.Services.AddAutoMapper(cfg => { }, 
+    typeof(FilterProfile), typeof(NotificationFilterProfile), typeof(UserProfile), typeof(ProfileMapping));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -166,6 +167,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IGroupRepository, GroupRepository>();
 builder.Services.AddScoped<INotificationReplyRepository, NotificationReplyRepository>();
+builder.Services.AddScoped<IAvatarPresetRepository, AvatarPresetRepository>();
 
 // Services
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -182,6 +184,8 @@ builder.Services.AddScoped<NotificationReplyService>();
 builder.Services.AddScoped<FileService>();
 builder.Services.AddSingleton<RedisService>();
 builder.Services.AddScoped<IDatabaseBackupService, DockerBackupUniversalService>();
+builder.Services.AddScoped<IAvatarService, AvatarService>();
+builder.Services.AddScoped<ProfileService>();
 
 // Background Services
 builder.Services.AddHostedService<KafkaConsumerService>();
@@ -215,6 +219,13 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new PhysicalFileProvider(
         Path.Combine(builder.Environment.ContentRootPath, "uploads")),
     RequestPath = "/uploads"
+});
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(app.Environment.ContentRootPath, "avatars")),
+    RequestPath = "/avatars"
 });
 
 app.UseAuthentication();

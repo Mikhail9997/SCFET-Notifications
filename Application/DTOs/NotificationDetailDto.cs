@@ -10,6 +10,7 @@ public class NotificationDetailDto
     public NotificationType Type { get; set; }
     public string SenderName { get; set; } = string.Empty;
     public string SenderRole { get; set; } = string.Empty;
+    public string SenderAvatarUrl  { get; set; } = string.Empty;
     public Guid SenderId { get; set; }
     public bool IsPersonal { get; set; }
     public bool AllowReplies { get; set; }
