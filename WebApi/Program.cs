@@ -185,7 +185,6 @@ builder.Services.AddScoped<FileService>();
 builder.Services.AddSingleton<RedisService>();
 builder.Services.AddScoped<IDatabaseBackupService, DockerBackupUniversalService>();
 builder.Services.AddScoped<IAvatarService, AvatarService>();
-builder.Services.AddScoped<ProfileService>();
 
 // Background Services
 builder.Services.AddHostedService<KafkaConsumerService>();
@@ -212,7 +211,7 @@ if (!Directory.Exists(uploadsPath))
 }
 
 // Создаем директорию avatars, если ее нет
-var avatarsPath = Path.Combine(app.Environment.ContentRootPath, "avatars");
+var avatarsPath = Path.Combine(app.Environment.ContentRootPath, "uploads", "avatars");
 if (!Directory.Exists(uploadsPath))
 {
     Directory.CreateDirectory(avatarsPath);
@@ -227,13 +226,6 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new PhysicalFileProvider(
         Path.Combine(builder.Environment.ContentRootPath, "uploads")),
     RequestPath = "/uploads"
-});
-
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(app.Environment.ContentRootPath, "avatars")),
-    RequestPath = "/avatars"
 });
 
 app.UseAuthentication();

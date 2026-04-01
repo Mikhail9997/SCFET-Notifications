@@ -169,9 +169,10 @@ public class NotificationsController:ControllerBase
         var pageResult = await _notificationRepository.GetUserNotificationsAsync(currentUserId,
             _mapper.Map<NotificationFilterEntity>(query));
 
-        var result = new GetItemsDto<Task<NotificationDto>>()
+        var items = new List<NotificationDto>();
+        foreach (var n in pageResult.Items)
         {
-            Items = pageResult.Items.Select(async (n) => new NotificationDto
+            items.Add(new NotificationDto
             {
                 Id = n.Id,
                 Title = n.Title,
@@ -187,7 +188,12 @@ public class NotificationsController:ControllerBase
                 AllowReplies = n.AllowReplies,
                 IsRead = n.Receivers.FirstOrDefault(r => r.UserId == currentUserId)?.IsRead ?? false,
                 ImageUrl = !string.IsNullOrEmpty(n.ImageUrl) ? $"{_configuration["BaseUrl"]}{n.ImageUrl}" : null
-            }).ToList(),
+            });
+        }
+        
+        var result = new GetItemsDto<NotificationDto>()
+        {
+            Items = items,
             TotalCount = pageResult.TotalCount,
             Page = pageResult.Page,
             PageSize = pageResult.PageSize

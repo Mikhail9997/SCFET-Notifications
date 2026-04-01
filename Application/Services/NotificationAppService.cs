@@ -27,6 +27,7 @@ public class NotificationAppService
     private readonly ILogger<NotificationAppService> _logger;
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly IAvatarService _avatarService;
 
     public NotificationAppService(
         INotificationRepository notificationRepository,
@@ -34,7 +35,10 @@ public class NotificationAppService
         IGroupRepository groupRepository,
         IKafkaProducer kafkaProducer, 
         IServiceProvider serviceProvider, 
-        ILogger<NotificationAppService> logger, ApplicationDbContext context, IConfiguration configuration)
+        ILogger<NotificationAppService> logger, 
+        ApplicationDbContext context,
+        IConfiguration configuration, 
+        IAvatarService avatarService)
     {
         _notificationRepository = notificationRepository;
         _userRepository = userRepository;
@@ -44,6 +48,7 @@ public class NotificationAppService
         _logger = logger;
         _context = context;
         _configuration = configuration;
+        _avatarService = avatarService;
     }
     
     public async Task SendNotificationAsync(CreateNotificationDto dto, Guid senderId, string? imageUrl = null)
@@ -83,6 +88,7 @@ public class NotificationAppService
 
         await _notificationRepository.AddAsync(notification);
 
+        string senderAvatarUrl = await _avatarService.GetAvatarUrl(notification.Sender.AvatarPresetKey);
         // Отправляем в Kafka
         var kafkaMessage = new NotificationKafkaMessage
         {
@@ -92,6 +98,7 @@ public class NotificationAppService
             Type = notification.Type,
             SenderName = $"{sender.FirstName} {sender.LastName}",
             SenderRole = notification.Sender.Role.ToString(),
+            SenderAvatarUrl = senderAvatarUrl,
             SenderId = senderId,
             AllowReplies = notification.AllowReplies,
             RecipientUserIds = recipients.Select(r => r.Id).ToList(),
@@ -169,6 +176,7 @@ public class NotificationAppService
         // Сохраняем изменения
         await _context.SaveChangesAsync();
         
+        string senderAvatarUrl = await _avatarService.GetAvatarUrl(sender.AvatarPresetKey);
         // Отправляем в Kafka если получатели изменились
         if (receiversToRemove.Any() || newReceiverIds.Except(existingReceiverIds).Any())
         {
@@ -179,7 +187,8 @@ public class NotificationAppService
                 Message = existingNotification.Message,
                 Type = existingNotification.Type,
                 SenderName = $"{sender.FirstName} {sender.LastName}",
-                SenderRole = existingNotification.Sender.Role.ToString(),
+                SenderRole = sender.Role.ToString(),
+                SenderAvatarUrl = senderAvatarUrl,
                 SenderId = senderId,
                 AllowReplies = existingNotification.AllowReplies,
                 RecipientUserIds = newReceiverIds.ToList(),
@@ -197,13 +206,14 @@ public class NotificationAppService
         }
         
         // Отправляем уведомление через SignalR для тех, у кого изменилось уведомление
-        await NotifyReceiversAboutUpdate(existingNotification.Id, existingNotification, existingReceiversThatStay, newReceiverIds, sender);
+        await NotifyReceiversAboutUpdate(existingNotification.Id, existingNotification, existingReceiversThatStay, sender);
     }
     
-    private async Task NotifyReceiversAboutUpdate(Guid notificationId, Notification notification, HashSet<Guid> receiverThatStayIds, HashSet<Guid> newReceiverIds, User sender)
+    private async Task NotifyReceiversAboutUpdate(Guid notificationId, Notification notification, HashSet<Guid> receiverThatStayIds, User sender)
     {
         try
         {
+            string senderAvatarUrl = await _avatarService.GetAvatarUrl(sender.AvatarPresetKey);
             var hubContext = _serviceProvider.GetRequiredService<IHubContext<NotificationHub>>();
             foreach (var receiverId in receiverThatStayIds)
             {
@@ -218,6 +228,7 @@ public class NotificationAppService
                             Type = notification.Type.ToString(),
                             SenderName = $"{sender.FirstName} {sender.LastName}",
                             SenderRole = notification.Sender.Role.ToString(),
+                            SenderAvatarUrl = senderAvatarUrl,
                             SenderId = notification.SenderId,
                             AllowReplies = notification.AllowReplies,
                             IsPersonal = NotificationUtils
@@ -225,7 +236,7 @@ public class NotificationAppService
                             CreatedAt = notification.CreatedAt,
                             IsRead = notification.Receivers
                                 .FirstOrDefault(r => r.UserId == receiverId)!.IsRead,
-                            ImageUrl = !string.IsNullOrEmpty(notification.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{notification.ImageUrl}" : null
+                            ImageUrl = !string.IsNullOrEmpty(notification.ImageUrl) ? $"{_configuration["BaseUrl"]}{notification.ImageUrl}" : null
                         });
                 }
                 catch (Exception ex)

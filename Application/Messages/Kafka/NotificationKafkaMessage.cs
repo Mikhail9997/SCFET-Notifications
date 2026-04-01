@@ -9,6 +9,7 @@ public class NotificationKafkaMessage
     public string Message { get; set; } = string.Empty;
     public NotificationType Type { get; set; }
     public string SenderName { get; set; } = string.Empty;
+    public string SenderAvatarUrl  { get; set; } = string.Empty;
     public string SenderRole { get; set; } = string.Empty;
     public Guid SenderId { get; set; }
     public bool AllowReplies { get; set; }

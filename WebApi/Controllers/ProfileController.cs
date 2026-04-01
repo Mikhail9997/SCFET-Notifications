@@ -11,23 +11,19 @@ namespace WebApi.Controllers;
 [Authorize]
 public class ProfileController:ControllerBase
 {
-    private readonly ProfileService _profileService;
     private readonly IAvatarService _avatarService;
     private readonly ICurrentUserService _currentUserService;
 
-    public ProfileController(ProfileService profileService, 
-        IWebHostEnvironment environment, ICurrentUserService currentUserService, 
+    public ProfileController(
+        ICurrentUserService currentUserService, 
         IAvatarService avatarService)
     {
-        _profileService = profileService;
         _currentUserService = currentUserService;
         _avatarService = avatarService;
-
-
     }
 
-    [HttpPost("uploadAvatar")]
-    public async Task<IActionResult> UploadAvatar(string avatarPresetKey)
+    [HttpPut("uploadAvatar")]
+    public async Task<IActionResult> UploadAvatar([FromBody] UploadAvatarDto dto)
     {
         if (!_currentUserService.UserId.HasValue)
             return Unauthorized();
@@ -35,7 +31,7 @@ public class ProfileController:ControllerBase
         Guid currentUserId = _currentUserService.UserId.Value;
         try
         {
-            await _profileService.UpdateAvatarPreset(currentUserId, avatarPresetKey);
+            await _avatarService.UpdateAvatarPresetAsync(currentUserId, dto.AvatarPresetKey);
             return Ok(new { message = "Успех", success=true });
         }
         catch (InvalidOperationException ex)
@@ -47,7 +43,30 @@ public class ProfileController:ControllerBase
             return StatusCode(500, new { message = "Внутренняя ошибка сервера", success=false });
         }
     }
+    
+    [Authorize(Roles = "Teacher,Administrator")]
+    [HttpPut("uploadCustomAvatar")]
+    public async Task<IActionResult> UploadCustomAvatar([FromForm]CreateCustomPresetDto dto)
+    {
+        if (!_currentUserService.UserId.HasValue)
+            return Unauthorized();
 
+        Guid currentUserId = _currentUserService.UserId.Value;
+        try
+        {
+            await _avatarService.UploadCustomPresetAsync(currentUserId, dto);
+            return Ok(new { message = "Успех", success=true });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message, success=false });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Внутренняя ошибка сервера", success=false });
+        }
+    }
+    
     [HttpGet("avatars")]
     public async Task<IActionResult> GetAllAvatarPresets()
     {

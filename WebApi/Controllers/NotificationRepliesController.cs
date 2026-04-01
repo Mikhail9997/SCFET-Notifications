@@ -19,15 +19,17 @@ public class NotificationRepliesController:ControllerBase
     private readonly ICurrentUserService _currentUserService;
     private readonly INotificationReplyRepository _notificationReplyRepository;
     private readonly IMapper _mapper;
+    private readonly IAvatarService _avatarService;
 
     public NotificationRepliesController(NotificationReplyService notificationReplyService,
         ICurrentUserService currentUserService, INotificationReplyRepository notificationReplyRepository, 
-        IMapper mapper)
+        IMapper mapper, IAvatarService avatarService)
     {
         _notificationReplyService = notificationReplyService;
         _currentUserService = currentUserService;
         _notificationReplyRepository = notificationReplyRepository;
         _mapper = mapper;
+        _avatarService = avatarService;
     }
 
     [HttpGet("notification/{notificationId}/replies")]
@@ -42,9 +44,19 @@ public class NotificationRepliesController:ControllerBase
             var pagedResult = await _notificationReplyRepository
                 .GetNotificationsReplyByNotificationId(notificationId, filter);
 
+            var items = new List<ReplyDto>();
+
+            foreach (NotificationReply item in pagedResult.Items)
+            {
+                var replyDto = _mapper.Map<ReplyDto>(item);
+                replyDto.UserAvatarUrl = await _avatarService.GetAvatarUrl(item.User.AvatarPresetKey);
+                
+                items.Add(replyDto);
+            }
+            
             GetItemsDto<ReplyDto> result = new GetItemsDto<ReplyDto>()
             {
-                Items = _mapper.Map<List<ReplyDto>>(pagedResult.Items),
+                Items = items,
                 TotalCount = pagedResult.TotalCount,
                 Page = pagedResult.Page,
                 PageSize = pagedResult.PageSize

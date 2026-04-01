@@ -15,12 +15,14 @@ public class NotificationReplyService
     private readonly INotificationRepository _notificationRepository;
     private readonly IUserRepository _userRepository;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IAvatarService _avatarService;
     private readonly ILogger<NotificationReplyService> _logger;
     private readonly IMapper _mapper;
         
     public NotificationReplyService(INotificationReplyRepository notificationReplyRepository, 
         ILogger<NotificationReplyService> logger, INotificationRepository notificationRepository, 
-        IUserRepository userRepository, IServiceProvider serviceProvider, IMapper mapper)
+        IUserRepository userRepository, IServiceProvider serviceProvider, IMapper mapper, 
+        IAvatarService avatarService)
     {
         _notificationReplyRepository = notificationReplyRepository;
         _logger = logger;
@@ -28,6 +30,7 @@ public class NotificationReplyService
         _userRepository = userRepository;
         _serviceProvider = serviceProvider;
         _mapper = mapper;
+        _avatarService = avatarService;
     }
     
     public async Task SendNotificationReplyAsync(CreateReplyDto dto, Guid senderId)
@@ -85,7 +88,7 @@ public class NotificationReplyService
             .ToList();
 
         ReplyDto reply = _mapper.Map<ReplyDto>(notificationReply);
-        
+        reply.UserAvatarUrl = await _avatarService.GetAvatarUrl(notificationReply.User.AvatarPresetKey);
         // уведомляем получателей об обновлении через SignalR
         await NotifyReceiversAboutUpdate(receiversIds, reply);
     }
@@ -111,6 +114,7 @@ public class NotificationReplyService
     {
         try
         {
+            string userAvatarUrl = await _avatarService.GetAvatarUrl(reply.User.AvatarPresetKey);
             var hubContext = _serviceProvider.GetRequiredService<IHubContext<NotificationHub>>();
             foreach (Guid receiverId in receiverIds)
             {
@@ -122,6 +126,7 @@ public class NotificationReplyService
                         NotificationId = reply.NotificationId,
                         UserId = reply.UserId,
                         UserName = $"{sender.FirstName} {sender.LastName}",
+                        UserAvatarUrl = userAvatarUrl,
                         UserRole = sender.Role.ToString(),
                         Message = reply.Message,
                         CreatedAt = reply.CreatedAt

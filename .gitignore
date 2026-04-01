@@ -9,9 +9,9 @@ WebApi/Backups/*
 !WebApi/Backups/.gitkeep
 
 WebApi/uploads/Notifications/
-WebApi/avatars/
+WebApi/uploads/avatars/
 
 !WebApi/uploads/Notifications/.gitkeep
-!WebApi/avatars/.gitkeep
+!WebApi/uploads/avatars/.gitkeep
 
 Infrastructure/Migrations/*

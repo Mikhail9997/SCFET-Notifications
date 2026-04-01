@@ -20,4 +20,34 @@ public class AvatarPresetRepository:BaseRepository<AvatarPreset>, IAvatarPresetR
         return await _context.AvatarPresets
             .FirstOrDefaultAsync(p => p.PresetKey == presetKey);
     }
+
+    public async Task<bool> Exists(string presetKey)
+    {
+        return await _context.AvatarPresets
+            .AnyAsync(p => p.PresetKey == presetKey);
+    }
+
+    public async Task RemoveByKey(string presetKey)
+    {
+        var preset = await _context.AvatarPresets
+            .FirstOrDefaultAsync(p => p.PresetKey == presetKey);
+
+        if (preset == null) return;
+
+        await DeleteAsync(preset);
+    }
+
+    public override async Task<IReadOnlyList<AvatarPreset>> GetAllAsync()
+    {
+        return await _context.AvatarPresets
+            .Where(p => p.Category != "custom")
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<AvatarPreset>> GetAllByCategory(string category)
+    {
+        return await _context.AvatarPresets
+            .Where(p => p.Category == category)
+            .ToListAsync();
+    }
 }

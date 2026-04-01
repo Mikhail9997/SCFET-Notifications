@@ -23,7 +23,7 @@ public class AdminAvatarController:ControllerBase
         IAvatarPresetRepository avatarPresetRepository)
     {
         _avatarPresetRepository = avatarPresetRepository;
-        _avatarsPath = Path.Combine(environment.ContentRootPath, "avatars", "presets");
+        _avatarsPath = Path.Combine(environment.ContentRootPath, "uploads", "avatars", "presets");
         
         // Создаем папку если нет
         if (!Directory.Exists(_avatarsPath))
@@ -41,7 +41,7 @@ public class AdminAvatarController:ControllerBase
                 return BadRequest("Файл не выбран");
             
             // Проверяем расширение
-            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".jfif" };
             var extension = Path.GetExtension(dto.Image.FileName).ToLower();
             
             if (!allowedExtensions.Contains(extension))
@@ -52,8 +52,13 @@ public class AdminAvatarController:ControllerBase
             
             // Сохраняем файл
             var fileName = $"{presetKey}{extension}";
-            var filePath = Path.Combine(_avatarsPath, fileName);
-            
+            string directoryPath = Path.Combine(_avatarsPath, dto.Category);
+            string filePath = Path.Combine(_avatarsPath, dto.Category, fileName);
+
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
             using (var stream = new FileStream(filePath, FileMode.Create))
             {
                 await dto.Image.CopyToAsync(stream);
@@ -79,7 +84,7 @@ public class AdminAvatarController:ControllerBase
                     preset.PresetKey,
                     preset.Name,
                     preset.Category,
-                    Url = $"/avatars/presets/{fileName}"
+                    Url = $"/avatars/presets/{dto.Category}/{fileName}"
                 }
             });
         }
@@ -91,7 +96,7 @@ public class AdminAvatarController:ControllerBase
     
     // Массовая загрузка (zip архивом)
     [HttpPost("upload-batch")]
-    public async Task<IActionResult> UploadBatch(IFormFile zipFile)
+    public async Task<IActionResult> UploadBatch(IFormFile zipFile, string category)
     {
         var uploaded = new List<string>();
         var errors = new List<string>();
@@ -103,14 +108,21 @@ public class AdminAvatarController:ControllerBase
             {
                 foreach (var entry in archive.Entries)
                 {
-                    if (entry.Name.EndsWith(".png") || entry.Name.EndsWith(".jpg"))
+                    if (entry.Name.EndsWith(".png") || entry.Name.EndsWith(".jpg") || 
+                        entry.Name.EndsWith(".jfif"))
                     {
                         try
                         {
                             var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(entry.Name);
                             var presetKey = await GeneratePresetKey(fileNameWithoutExtension);
                             var fileName = entry.Name;
-                            var filePath = Path.Combine(_avatarsPath, fileName);
+                            string directoryPath = Path.Combine(_avatarsPath, category);
+                            var filePath = Path.Combine(_avatarsPath, category, fileName);
+                            
+                            if (!Directory.Exists(directoryPath))
+                            {
+                                Directory.CreateDirectory(directoryPath);
+                            }
                             
                             // Извлекаем файл
                             entry.ExtractToFile(filePath, true);
@@ -121,7 +133,7 @@ public class AdminAvatarController:ControllerBase
                                 PresetKey = presetKey,
                                 Name = presetKey.Replace("_", " "),
                                 FileName = fileName,
-                                Category = "New",
+                                Category = category,
                             };
 
                             await _avatarPresetRepository.AddAsync(preset);
@@ -156,7 +168,7 @@ public class AdminAvatarController:ControllerBase
                 return NotFound();
         
             // Удаляем файл
-            var filePath = Path.Combine(_avatarsPath, preset.FileName);
+            var filePath = Path.Combine(_avatarsPath, preset.Category, preset.FileName);
             if (System.IO.File.Exists(filePath))
                 System.IO.File.Delete(filePath);
         
@@ -172,17 +184,25 @@ public class AdminAvatarController:ControllerBase
     }
     
     // Удаление всех аватарок
-    [HttpDelete("deleteAll")]
-    public async Task<IActionResult> DeleteAllAvatarsPreset()
+    [HttpDelete("deleteAll/{category}")]
+    public async Task<IActionResult> DeleteAllAvatarsPreset(string? category)
     {
         try
         {
-            var presets = await _avatarPresetRepository.GetAllAsync();
+            IReadOnlyList<AvatarPreset> presets;
+            if (!string.IsNullOrEmpty(category))
+            {
+                presets = await _avatarPresetRepository.GetAllByCategory(category);
+            }
+            else
+            {
+                presets = await _avatarPresetRepository.GetAllAsync();
+            }
 
             foreach (var preset in presets)
             {
                 // Удаляем файл
-                var filePath = Path.Combine(_avatarsPath, preset.FileName);
+                var filePath = Path.Combine(_avatarsPath, preset.Category, preset.FileName);
                 if (System.IO.File.Exists(filePath))
                     System.IO.File.Delete(filePath);
 

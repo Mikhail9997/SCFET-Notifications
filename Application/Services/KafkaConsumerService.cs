@@ -117,13 +117,14 @@ namespace Application.Services;
                                 Type = notificationMessage.Type.ToString(),
                                 SenderName = notificationMessage.SenderName,
                                 SenderRole = notificationMessage.SenderRole,
+                                SenderAvatarUrl = notificationMessage.SenderAvatarUrl,
                                 SenderId = notificationMessage.SenderId,
                                 AllowReplies = notificationMessage.AllowReplies,
                                 IsPersonal = NotificationUtils
                                     .IsPersonal(notificationMessage.RecipientUserIds.ToHashSet(), userId),
                                 CreatedAt = notificationMessage.CreatedAt,
                                 IsRead = false,
-                                ImageUrl = !string.IsNullOrEmpty(notificationMessage.ImageUrl) ? $"{_configuration["CloudPud:Ip"]}{notificationMessage.ImageUrl}" : null
+                                ImageUrl = !string.IsNullOrEmpty(notificationMessage.ImageUrl) ? $"{_configuration["BaseUrl"]}{notificationMessage.ImageUrl}" : null
                             });
                         
                         _logger.LogDebug("Notification sent to user {UserId}", userId);
