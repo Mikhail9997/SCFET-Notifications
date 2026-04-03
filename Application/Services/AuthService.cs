@@ -307,8 +307,18 @@ public class AuthService
         var userId = principal.Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value;
         var user = await _userRepository.GetByIdAsync(Guid.Parse(userId));
 
-        if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+        if (user == null)
+        {
+            throw new SecurityTokenException("User not found");
+        }
+
+        if (user.RefreshToken != refreshToken)
+        {
             throw new SecurityTokenException("Invalid refresh token");
+        }
+       
+        if (user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+            throw new SecurityTokenException("Refresh token exired");
 
         // Генерация новых токенов
         var newAccessToken = _jwtTokenGenerator.GenerateAccessToken(user);
