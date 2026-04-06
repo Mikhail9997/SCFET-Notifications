@@ -19,9 +19,10 @@ public class NotificationReplyRepository:BaseRepository<NotificationReply>, INot
             .FirstOrDefaultAsync(nr => nr.Id == id);
     }
 
-    public async Task<PagedResult<NotificationReply>> GetNotificationsReplyByNotificationId(Guid notificationId, NotificationFilterEntity filter)
+    public async Task<PagedResult<NotificationReply>> GetNotificationsReplyByNotificationId(Guid notificationId, FilterEntity filter)
     {
         IQueryable<NotificationReply> query = _context.NotificationReplies
+            .AsNoTracking()
             .Include(nr => nr.User)
             .Where(nr => nr.NotificationId == notificationId);
 
@@ -39,7 +40,7 @@ public class NotificationReplyRepository:BaseRepository<NotificationReply>, INot
     }
     
     private async Task<(IQueryable<NotificationReply> notificationsReplies, int totalCount)> ApplyFiltersAsync(IQueryable<NotificationReply> query,
-        NotificationFilterEntity filter)
+        FilterEntity filter)
     {
         if (filter.StartDate.HasValue)
         {
@@ -66,9 +67,9 @@ public class NotificationReplyRepository:BaseRepository<NotificationReply>, INot
         
         switch (filter.SortBy)
         {
-            case NotificationSortBy.CreatedAt:
+            case SortBy.CreatedAt:
             default:
-                query = filter.SortOrder == NotificationSortOrder.Ascending
+                query = filter.SortOrder == SortOrder.Ascending
                     ? query.OrderBy(n => n.CreatedAt)
                     : query.OrderByDescending(n => n.CreatedAt);
                 break;

@@ -55,7 +55,7 @@ public class UsersController: ControllerBase
     
     [HttpGet("students")]
     [Authorize(Roles = "Teacher,Administrator")]
-    public async Task<IActionResult> GetStudents([FromQuery] FilterDto query)
+    public async Task<IActionResult> GetStudents([FromQuery] UserFilterDto query)
     {
         string cacheKey = $"students_{JsonSerializer.Serialize(query)}";
         int hours = int.Parse(_configuration["Redis:Hours"] ?? "1");
@@ -84,7 +84,7 @@ public class UsersController: ControllerBase
             //Кешируем результат
             await _redis.SetAsync("students", _mapper.Map<List<UserDto>>(students), TimeSpan.FromHours(hours));
         }
-        students = (List<User>)await _userRepository.FilterAsync(_mapper.Map<FilterEntity>(query), students);
+        students = (List<User>)await _userRepository.FilterAsync(_mapper.Map<UserFilterEntity>(query), students);
         // Кешируем результат с фильтрацией
         await _redis.SetAsync(cacheKey, _mapper.Map<List<UserDto>>(students), TimeSpan.FromMinutes(minutes));
         return Ok(students.Select(s => new
@@ -102,7 +102,7 @@ public class UsersController: ControllerBase
     
     [HttpGet("teachers")]
     [Authorize(Roles = "Administrator, Teacher")]
-    public async Task<IActionResult> GetTeachers([FromQuery] FilterDto query)
+    public async Task<IActionResult> GetTeachers([FromQuery] UserFilterDto query)
     {
         string cacheKey = $"teachers_{JsonSerializer.Serialize(query)}";
         int hours = int.Parse(_configuration["Redis:Hours"] ?? "1");
@@ -130,7 +130,7 @@ public class UsersController: ControllerBase
             //Кешируем результат
             await _redis.SetAsync("teachers", _mapper.Map<List<UserDto>>(teachers), TimeSpan.FromHours(hours));
         }
-        teachers = (List<User>)await _userRepository.FilterAsync(_mapper.Map<FilterEntity>(query), teachers);
+        teachers = (List<User>)await _userRepository.FilterAsync(_mapper.Map<UserFilterEntity>(query), teachers);
         // Кешируем результат с фильтрацией
         await _redis.SetAsync(cacheKey, _mapper.Map<List<UserDto>>(teachers), TimeSpan.FromMinutes(minutes));
         return Ok(teachers.Select(t => new
@@ -146,7 +146,7 @@ public class UsersController: ControllerBase
     
     [HttpGet("administrators")]
     [Authorize(Roles = "Administrator")]
-    public async Task<IActionResult> GetAdministrators([FromQuery] FilterDto query)
+    public async Task<IActionResult> GetAdministrators([FromQuery] UserFilterDto query)
     {
         string cacheKey = $"admins_{JsonSerializer.Serialize(query)}";
         int hours = int.Parse(_configuration["Redis:Hours"] ?? "1");
@@ -175,7 +175,7 @@ public class UsersController: ControllerBase
             //Кешируем результат
             await _redis.SetAsync("admins", _mapper.Map<List<UserDto>>(admins), TimeSpan.FromHours(hours));
         }
-        admins = (List<User>)await _userRepository.FilterAsync(_mapper.Map<FilterEntity>(query), admins);
+        admins = (List<User>)await _userRepository.FilterAsync(_mapper.Map<UserFilterEntity>(query), admins);
         // Кешируем результат с фильтрацией
         await _redis.SetAsync(cacheKey, _mapper.Map<List<UserDto>>(admins), TimeSpan.FromMinutes(minutes));
         return Ok(admins.Select(a => new
@@ -192,7 +192,7 @@ public class UsersController: ControllerBase
     
     [HttpGet("parents")]
     [Authorize(Roles = "Administrator, Teacher")]
-    public async Task<IActionResult> GetParents([FromQuery] FilterDto query)
+    public async Task<IActionResult> GetParents([FromQuery] UserFilterDto query)
     {
         string cacheKey = $"parents_{JsonSerializer.Serialize(query)}";
         int hours = int.Parse(_configuration["Redis:Hours"] ?? "1");
@@ -220,7 +220,7 @@ public class UsersController: ControllerBase
             //Кешируем результат
             await _redis.SetAsync("parents", _mapper.Map<List<UserDto>>(parents), TimeSpan.FromHours(hours));
         }
-        parents = (List<User>)await _userRepository.FilterAsync(_mapper.Map<FilterEntity>(query), parents);
+        parents = (List<User>)await _userRepository.FilterAsync(_mapper.Map<UserFilterEntity>(query), parents);
         // Кешируем результат с фильтрацией
         await _redis.SetAsync(cacheKey, _mapper.Map<List<UserDto>>(parents), TimeSpan.FromMinutes(minutes));
         return Ok(parents.Select(p => new

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Application.Common.Interfaces;
 using Application.DTOs;
 using Application.Exceptions;
+using Application.Extensions;
 using Application.Hubs;
 using Application.Messages.Kafka;
 using Application.Utils;
@@ -102,6 +103,7 @@ public class NotificationAppService
             SenderId = senderId,
             AllowReplies = notification.AllowReplies,
             RecipientUserIds = recipients.Select(r => r.Id).ToList(),
+            FavoritesIds = notification.FavoriteByUsers.Select(r => r.UserId).ToHashSet(),
             CreatedAt = notification.CreatedAt,
             ImageUrl = string.IsNullOrEmpty(imageUrl) ? null : imageUrl
         };
@@ -118,6 +120,7 @@ public class NotificationAppService
         // Загружаем notification с получателями 
         var existingNotification = await _context.Notifications
             .Include(n => n.Receivers)
+            .Include(n => n.FavoriteByUsers)
             .FirstOrDefaultAsync(n => n.Id == notification.Id);
             
         if (existingNotification == null)
@@ -192,6 +195,8 @@ public class NotificationAppService
                 SenderId = senderId,
                 AllowReplies = existingNotification.AllowReplies,
                 RecipientUserIds = newReceiverIds.ToList(),
+                FavoritesIds = existingNotification
+                    .FavoriteByUsers.Select(f => f.UserId).ToHashSet(),
                 CreatedAt = existingNotification.CreatedAt,
                 ImageUrl = existingNotification.ImageUrl
             };
@@ -233,6 +238,7 @@ public class NotificationAppService
                             AllowReplies = notification.AllowReplies,
                             IsPersonal = NotificationUtils
                                 .IsPersonal(notification.Receivers.Select(r => r.UserId).ToHashSet(), receiverId),
+                            IsFavorite = notification.IsFavorite(receiverId),
                             CreatedAt = notification.CreatedAt,
                             IsRead = notification.Receivers
                                 .FirstOrDefault(r => r.UserId == receiverId)!.IsRead,

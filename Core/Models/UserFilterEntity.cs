@@ -1,6 +1,6 @@
 ﻿namespace Core.Models;
 
-public class FilterEntity
+public class UserFilterEntity
 {
     public string? FirstName { get; set; } = string.Empty;
     public string? LastName { get; set; } = string.Empty;
@@ -15,22 +15,22 @@ public class GroupFilterEntity
     public string? Name { get; set; } = string.Empty;
 }
 
-public class NotificationFilterEntity
+public class FilterEntity
 {
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 2;
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
-    public NotificationSortOrder SortOrder { get; set; } = NotificationSortOrder.Descending;
-    public NotificationSortBy SortBy { get; set; } = NotificationSortBy.CreatedAt;
+    public SortOrder SortOrder { get; set; } = SortOrder.Descending;
+    public SortBy SortBy { get; set; } = SortBy.CreatedAt;
 }
 
-public enum NotificationSortOrder
+public enum SortOrder
 {
     Ascending,
     Descending
 }
-public enum NotificationSortBy
+public enum SortBy
 {
     CreatedAt,
     Title

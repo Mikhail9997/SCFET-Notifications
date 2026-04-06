@@ -122,6 +122,8 @@ namespace Application.Services;
                                 AllowReplies = notificationMessage.AllowReplies,
                                 IsPersonal = NotificationUtils
                                     .IsPersonal(notificationMessage.RecipientUserIds.ToHashSet(), userId),
+                                IsFavorite = NotificationUtils
+                                    .IsFavorite(notificationMessage.FavoritesIds, userId),
                                 CreatedAt = notificationMessage.CreatedAt,
                                 IsRead = false,
                                 ImageUrl = !string.IsNullOrEmpty(notificationMessage.ImageUrl) ? $"{_configuration["BaseUrl"]}{notificationMessage.ImageUrl}" : null

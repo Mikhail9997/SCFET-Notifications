@@ -13,6 +13,7 @@ public class NotificationDto
     public string SenderAvatarUrl  { get; set; } = string.Empty;
     public Guid SenderId { get; set; }
     public bool IsPersonal { get; set; }
+    public bool IsFavorite { get; set; }
     public bool AllowReplies { get; set; }
     public DateTime CreatedAt { get; set; }
     public bool IsRead { get; set; }

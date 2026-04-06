@@ -30,13 +30,15 @@ public class NotificationRepository : BaseRepository<Notification>, INotificatio
             .Where(n => n.Id == notificationId)
             .ToListAsync();
     }
-
+    
     public override async Task<Notification?> GetByIdAsync(Guid id)
     {
         return await _context.Notifications
             .Include(n => n.Sender)
             .Include(n => n.Receivers)
-            .ThenInclude(r => r.User)
+                .ThenInclude(r => r.User)
+            .Include(n => n.FavoriteByUsers)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(n => n.Id == id);
     }
 
@@ -48,13 +50,15 @@ public class NotificationRepository : BaseRepository<Notification>, INotificatio
             .OrderByDescending(n => n.CreatedAt)
             .ToListAsync();
     }
-
-    public async Task<PagedResult<Notification>> GetBySenderIdAsync(Guid senderId, NotificationFilterEntity filter)
+    
+    public async Task<PagedResult<Notification>> GetBySenderIdAsync(Guid senderId, FilterEntity filter)
     {
         var query = _context.Notifications
+            .AsNoTracking()
             .Include(n => n.Sender)
             .Include(n => n.Receivers)
-            .Where(n => n.SenderId == senderId);
+            .Where(n => n.SenderId == senderId)
+            .AsSplitQuery();
         
         (query, int totalCount) = await ApplyFiltersAsync(query, filter);
         
@@ -70,12 +74,15 @@ public class NotificationRepository : BaseRepository<Notification>, INotificatio
     }
     
     public async Task<PagedResult<Notification>> GetUserNotificationsAsync(
-        Guid userId, NotificationFilterEntity filter)
+        Guid userId, FilterEntity filter)
     {
         var query = _context.Notifications
+            .AsNoTracking()
             .Include(n => n.Sender)
             .Include(n => n.Receivers)
-            .Where(n => n.Receivers.Any(r => r.UserId == userId));
+            .Include(n => n.FavoriteByUsers)
+            .Where(n => n.Receivers.Any(r => r.UserId == userId))
+            .AsSplitQuery();
 
         (query, int totalCount) = await ApplyFiltersAsync(query, filter);
         
@@ -99,7 +106,7 @@ public class NotificationRepository : BaseRepository<Notification>, INotificatio
     }
     
     private async Task<(IQueryable<Notification> notifications, int totalCount)> ApplyFiltersAsync(IQueryable<Notification> query,
-        NotificationFilterEntity filter)
+        FilterEntity filter)
     {
         if (filter.StartDate.HasValue)
         {
@@ -126,15 +133,15 @@ public class NotificationRepository : BaseRepository<Notification>, INotificatio
         
         switch (filter.SortBy)
         {
-            case NotificationSortBy.Title:
-                query = filter.SortOrder == NotificationSortOrder.Ascending
+            case SortBy.Title:
+                query = filter.SortOrder == SortOrder.Ascending
                     ? query.OrderBy(n => n.Title)
                     : query.OrderByDescending(n => n.Title);
                 break;
                 
-            case NotificationSortBy.CreatedAt:
+            case SortBy.CreatedAt:
             default:
-                query = filter.SortOrder == NotificationSortOrder.Ascending
+                query = filter.SortOrder == SortOrder.Ascending
                     ? query.OrderBy(n => n.CreatedAt)
                     : query.OrderByDescending(n => n.CreatedAt);
                 break;

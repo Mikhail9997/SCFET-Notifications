@@ -9,23 +9,21 @@ public class FilterProfile:Profile
     public FilterProfile()
     {
         CreateMap<FilterDto, FilterEntity>()
-            .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => 
-                string.IsNullOrWhiteSpace(src.FirstName) ? null : src.FirstName))
-            .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => 
-                string.IsNullOrWhiteSpace(src.LastName) ? null : src.LastName))
-            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => 
-                string.IsNullOrWhiteSpace(src.Email) ? null : src.Email))
-            .ForMember(dest => dest.GroupId, opt => opt.MapFrom(src => src.GroupId))
-            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive));
+            .ForMember(dest => dest.Page, opt => opt.MapFrom(src => src.Page))
+            .ForMember(dest => dest.PageSize, opt => opt.MapFrom(src => src.PageSize))
+            .ForMember(dest => dest.StartDate, opt => opt.MapFrom(src => 
+                src.StartDate))
+            .ForMember(dest => dest.EndDate, opt => opt.MapFrom(src => 
+                src.EndDate))
+            .ForMember(dest => dest.SortOrder, opt => opt.MapFrom(src => src.SortOrder))
+            .ForMember(dest => dest.SortBy, opt => opt.MapFrom(src => src.SortBy));
 
         CreateMap<FilterEntity, FilterDto>()
-            .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => 
-                src.FirstName ?? string.Empty))
-            .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => 
-                src.LastName ?? string.Empty))
-            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => 
-                src.Email ?? string.Empty))
-            .ForMember(dest => dest.GroupId, opt => opt.MapFrom(src => src.GroupId))
-            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive));
+            .ForMember(dest => dest.Page, opt => opt.MapFrom(src => src.Page))
+            .ForMember(dest => dest.PageSize, opt => opt.MapFrom(src => src.PageSize))
+            .ForMember(dest => dest.StartDate, opt => opt.MapFrom(src => src.StartDate))
+            .ForMember(dest => dest.EndDate, opt => opt.MapFrom(src => src.EndDate))
+            .ForMember(dest => dest.SortOrder, opt => opt.MapFrom(src => src.SortOrder))
+            .ForMember(dest => dest.SortBy, opt => opt.MapFrom(src => src.SortBy));
     }
 }

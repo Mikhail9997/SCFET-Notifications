@@ -21,6 +21,7 @@ public class User : BaseEntity
     public ICollection<Notification> SentNotifications { get; set; } = new List<Notification>();
     public ICollection<NotificationReceiver> ReceivedNotifications { get; set; } = new List<NotificationReceiver>();
     public ICollection<NotificationReply> Replies { get; set; } = new List<NotificationReply>();
+    public ICollection<UserFavoriteNotification> FavoriteNotifications { get; set; } = new List<UserFavoriteNotification>();
 }
 
 public enum UserRole

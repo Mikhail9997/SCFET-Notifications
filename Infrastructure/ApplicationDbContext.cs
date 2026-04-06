@@ -13,7 +13,8 @@ namespace Infrastructure;
         public DbSet<Notification> Notifications => Set<Notification>();
         public DbSet<NotificationReply> NotificationReplies => Set<NotificationReply>();
         public DbSet<NotificationReceiver> NotificationReceivers => Set<NotificationReceiver>();
-        public DbSet<AvatarPreset?> AvatarPresets => Set<AvatarPreset>();
+        public DbSet<AvatarPreset> AvatarPresets => Set<AvatarPreset>();
+        public DbSet<UserFavoriteNotification> UserFavoriteNotifications => Set<UserFavoriteNotification>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -25,5 +26,6 @@ namespace Infrastructure;
             modelBuilder.ApplyConfiguration(new NotificationReceiverConfiguration());
             modelBuilder.ApplyConfiguration(new NotificationReplyConfiguration());
             modelBuilder.ApplyConfiguration(new AvatarPresetConfiguration());
+            modelBuilder.ApplyConfiguration(new UserFavoriteNotificationConfiguration());
         }
     }

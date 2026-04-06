@@ -1,6 +1,7 @@
 ﻿using Application.Common.Interfaces;
 using Application.DTOs;
 using Application.Exceptions;
+using Application.Extensions;
 using Application.Hubs;
 using Application.Services;
 using Application.Utils;
@@ -160,14 +161,14 @@ public class NotificationsController:ControllerBase
     }
     
     [HttpGet("my")]
-    public async Task<IActionResult> GetMyNotifications([FromQuery] NotificationFilterDto query)
+    public async Task<IActionResult> GetMyNotifications([FromQuery] FilterDto query)
     {
         if (!_currentUserService.UserId.HasValue)
             return Unauthorized();
         Guid currentUserId = _currentUserService.UserId.Value;
         
         var pageResult = await _notificationRepository.GetUserNotificationsAsync(currentUserId,
-            _mapper.Map<NotificationFilterEntity>(query));
+            _mapper.Map<FilterEntity>(query));
 
         var items = new List<NotificationDto>();
         foreach (var n in pageResult.Items)
@@ -184,6 +185,7 @@ public class NotificationsController:ControllerBase
                 SenderId = n.SenderId,
                 IsPersonal = NotificationUtils
                     .IsPersonal(n.Receivers.Select(r => r.UserId).ToHashSet(), currentUserId),
+                IsFavorite = n.IsFavorite(currentUserId),
                 CreatedAt = n.CreatedAt,
                 AllowReplies = n.AllowReplies,
                 IsRead = n.Receivers.FirstOrDefault(r => r.UserId == currentUserId)?.IsRead ?? false,
@@ -227,6 +229,7 @@ public class NotificationsController:ControllerBase
             AllowReplies = notification.AllowReplies,
             IsPersonal = NotificationUtils
                 .IsPersonal(notification.Receivers.Select(r => r.UserId).ToHashSet(), currentUserId),
+            IsFavorite = notification.IsFavorite(currentUserId),
             CreatedAt = notification.CreatedAt,
             Receivers = notification.Receivers.Select(r => new NotificationReceiverDto
             {
@@ -266,14 +269,14 @@ public class NotificationsController:ControllerBase
 
     [HttpGet("sent")]
     [Authorize(Roles = "Teacher,Administrator")]
-    public async Task<IActionResult> GetSentNotifications([FromQuery] NotificationFilterDto query)
+    public async Task<IActionResult> GetSentNotifications([FromQuery] FilterDto query)
     {
         if (!_currentUserService.UserId.HasValue)
             return Unauthorized();
         Guid currentUserId = _currentUserService.UserId.Value;
         
         var pagedResult = await _notificationRepository.GetBySenderIdAsync(_currentUserService.UserId.Value, 
-            _mapper.Map<NotificationFilterEntity>(query));
+            _mapper.Map<FilterEntity>(query));
         
         var sentNotifications = pagedResult
             .Items

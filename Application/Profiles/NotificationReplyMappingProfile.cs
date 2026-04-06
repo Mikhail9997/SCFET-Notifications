@@ -16,6 +16,6 @@ public class NotificationReplyMappingProfile:Profile
         
         CreateMap<CreateReplyDto, NotificationReply>();
         CreateMap<UpdateNotificationReplyDto, NotificationReply>();
-        CreateMap<NotificationFilterDto, NotificationFilterEntity>();
+        CreateMap<FilterDto, FilterEntity>();
     }
 }

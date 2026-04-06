@@ -16,6 +16,7 @@ namespace WebApi.Controllers;
 public class NotificationRepliesController:ControllerBase
 {
     private readonly NotificationReplyService _notificationReplyService;
+    private readonly INotificationRepository _notificationRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly INotificationReplyRepository _notificationReplyRepository;
     private readonly IMapper _mapper;
@@ -23,24 +24,37 @@ public class NotificationRepliesController:ControllerBase
 
     public NotificationRepliesController(NotificationReplyService notificationReplyService,
         ICurrentUserService currentUserService, INotificationReplyRepository notificationReplyRepository, 
-        IMapper mapper, IAvatarService avatarService)
+        IMapper mapper, IAvatarService avatarService, 
+        INotificationRepository notificationRepository)
     {
         _notificationReplyService = notificationReplyService;
         _currentUserService = currentUserService;
         _notificationReplyRepository = notificationReplyRepository;
         _mapper = mapper;
         _avatarService = avatarService;
+        _notificationRepository = notificationRepository;
     }
 
     [HttpGet("notification/{notificationId}/replies")]
-    public async Task<IActionResult> GetNotificationReplies(Guid notificationId, [FromQuery] NotificationFilterDto query)
+    public async Task<IActionResult> GetNotificationReplies(Guid notificationId, [FromQuery] FilterDto query)
     {
         if (!_currentUserService.UserId.HasValue)
             return Unauthorized();
-
+        
+        var userId = _currentUserService.UserId.Value;
         try
         {
-            var filter = _mapper.Map<NotificationFilterEntity>(query);
+            var notification = await _notificationRepository.GetByIdAsync(notificationId);
+            if (notification == null)
+            {
+                return BadRequest(new {message = "Уведомление не найдено", success = false});
+            }
+            if (notification.Receivers.All(r => r.UserId != userId))
+            {
+                return BadRequest(new {message = "Вы не являетесь получателем данного уведомления", success = false});
+            }
+            
+            var filter = _mapper.Map<FilterEntity>(query);
             var pagedResult = await _notificationReplyRepository
                 .GetNotificationsReplyByNotificationId(notificationId, filter);
 

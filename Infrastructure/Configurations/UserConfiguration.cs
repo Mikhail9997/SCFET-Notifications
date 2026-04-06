@@ -60,5 +60,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .WithOne(n => n.Sender)
             .HasForeignKey(n => n.SenderId)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        builder.HasMany(u => u.FavoriteNotifications)
+            .WithOne(f => f.User)
+            .HasForeignKey(f => f.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

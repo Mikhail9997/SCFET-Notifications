@@ -13,6 +13,7 @@ public class Notification : BaseEntity
     // Навигация
     public ICollection<NotificationReceiver> Receivers { get; set; } = new List<NotificationReceiver>();
     public ICollection<NotificationReply> Replies { get; set; } = new List<NotificationReply>();
+    public ICollection<UserFavoriteNotification> FavoriteByUsers { get; set; } = new List<UserFavoriteNotification>();
 }
 
 public enum NotificationType

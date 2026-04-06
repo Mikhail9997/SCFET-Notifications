@@ -43,7 +43,7 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
 builder.Services.AddAutoMapper(cfg => { }, 
-    typeof(FilterProfile), typeof(NotificationFilterProfile), typeof(UserProfile), typeof(ProfileMapping));
+    typeof(UserFilterProfile), typeof(FilterProfile), typeof(UserProfile), typeof(ProfileMapping));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -168,6 +168,7 @@ builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IGroupRepository, GroupRepository>();
 builder.Services.AddScoped<INotificationReplyRepository, NotificationReplyRepository>();
 builder.Services.AddScoped<IAvatarPresetRepository, AvatarPresetRepository>();
+builder.Services.AddScoped<IUserFavoriteNotificationRepository, UserFavoriteNotificationRepository>();
 
 // Services
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -176,6 +177,7 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddSingleton<IRandomTokenGenerator, RandomTokenGenerator>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+builder.Services.AddScoped<IFavoritesService, FavoritesService>();
 
 // Application Services
 builder.Services.AddScoped<AuthService>();

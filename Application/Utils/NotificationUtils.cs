@@ -8,4 +8,9 @@ public static class NotificationUtils
     {
         return receivers.Count <= 2 && receivers.Contains(currentReceiver);
     }
+
+    public static bool IsFavorite(HashSet<Guid> favorites, Guid userId)
+    {
+        return favorites.Contains(userId);
+    }
 }

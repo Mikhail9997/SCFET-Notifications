@@ -37,7 +37,7 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             .ToListAsync();
     }
 
-    public async Task<IReadOnlyList<User>> FilterAsync(FilterEntity query, IEnumerable<User>? users = null)
+    public async Task<IReadOnlyList<User>> FilterAsync(UserFilterEntity query, IEnumerable<User>? users = null)
     {
         var source = users?.AsQueryable() ?? _context.Users;
     
@@ -50,7 +50,7 @@ public class UserRepository : BaseRepository<User>, IUserRepository
         return filtered.ToList();
     }
 
-    private IQueryable<User> ApplyFilters(IQueryable<User> source, FilterEntity query)
+    private IQueryable<User> ApplyFilters(IQueryable<User> source, UserFilterEntity query)
     {
         if (!string.IsNullOrEmpty(query.FirstName))
         {
