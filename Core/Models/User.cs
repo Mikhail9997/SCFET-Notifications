@@ -22,6 +22,12 @@ public class User : BaseEntity
     public ICollection<NotificationReceiver> ReceivedNotifications { get; set; } = new List<NotificationReceiver>();
     public ICollection<NotificationReply> Replies { get; set; } = new List<NotificationReply>();
     public ICollection<UserFavoriteNotification> FavoriteNotifications { get; set; } = new List<UserFavoriteNotification>();
+    
+    public ICollection<Channel> OwnedChannels { get; set; } = new List<Channel>();
+    public ICollection<ChannelUser> ChannelMemberships { get; set; } = new List<ChannelUser>();
+    public ICollection<ChannelInvitation> SentInvitations { get; set; } = new List<ChannelInvitation>();
+    public ICollection<ChannelInvitation> ReceivedInvitations { get; set; } = new List<ChannelInvitation>();
+    public ICollection<ChannelMessage> ChannelMessages { get; set; } = new List<ChannelMessage>();
 }
 
 public enum UserRole

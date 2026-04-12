@@ -43,7 +43,9 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
 builder.Services.AddAutoMapper(cfg => { }, 
-    typeof(UserFilterProfile), typeof(FilterProfile), typeof(UserProfile), typeof(ProfileMapping));
+    typeof(UserFilterProfile), typeof(FilterProfile), typeof(UserProfile), typeof(ProfileMapping), 
+    typeof(ChannelProfile), typeof(ChannelMessageProfile));
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -116,7 +118,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
                 
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/notificationHub"))
+                if (!string.IsNullOrEmpty(accessToken) && 
+                    (path.StartsWithSegments("/notificationHub") || path.StartsWithSegments("/channelHub")))
                 {
                     context.Token = accessToken;
                 }
@@ -169,6 +172,10 @@ builder.Services.AddScoped<IGroupRepository, GroupRepository>();
 builder.Services.AddScoped<INotificationReplyRepository, NotificationReplyRepository>();
 builder.Services.AddScoped<IAvatarPresetRepository, AvatarPresetRepository>();
 builder.Services.AddScoped<IUserFavoriteNotificationRepository, UserFavoriteNotificationRepository>();
+builder.Services.AddScoped<IChannelRepository, ChannelRepository>();
+builder.Services.AddScoped<IChannelUserRepository, ChannelUserRepository>();
+builder.Services.AddScoped<IChannelInvitationRepository, ChannelInvitationRepository>();
+builder.Services.AddScoped<IChannelMessageRepository, ChannelMessageRepository>();
 
 // Services
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -178,6 +185,10 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddSingleton<IRandomTokenGenerator, RandomTokenGenerator>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IFavoritesService, FavoritesService>();
+builder.Services.AddScoped<IChannelService, ChannelService>();
+builder.Services.AddScoped<IChannelNotificationService, ChannelNotificationService>();
+builder.Services.AddScoped<IChannelUserService, ChannelUserService>();
+builder.Services.AddScoped<IChannelMessageService, ChannelMessageService>();
 
 // Application Services
 builder.Services.AddScoped<AuthService>();
@@ -236,6 +247,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.UseHttpsRedirection();
 app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<ChannelHub>("/channelHub");
 app.MapHealthChecks("/health");
 
 // Убеждаемся, что база данных создана

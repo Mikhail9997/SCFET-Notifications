@@ -1,5 +1,7 @@
 ﻿namespace Core.Models;
 
+
+
 public class UserFilterEntity
 {
     public string? FirstName { get; set; } = string.Empty;
@@ -15,23 +17,14 @@ public class GroupFilterEntity
     public string? Name { get; set; } = string.Empty;
 }
 
-public class FilterEntity
+public class FilterEntity:BaseFilterEntity
 {
-    public int Page { get; set; } = 1;
-    public int PageSize { get; set; } = 2;
-    public DateTime? StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
-    public SortOrder SortOrder { get; set; } = SortOrder.Descending;
     public SortBy SortBy { get; set; } = SortBy.CreatedAt;
 }
 
-public enum SortOrder
-{
-    Ascending,
-    Descending
-}
 public enum SortBy
 {
     CreatedAt,
-    Title
+    Title,
+    Name
 }

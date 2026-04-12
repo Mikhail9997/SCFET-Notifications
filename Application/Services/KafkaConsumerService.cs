@@ -40,7 +40,7 @@ namespace Application.Services;
 
             _consumer = new ConsumerBuilder<Ignore, string>(consumerConfig).Build();
         }
-
+        
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             await Task.Delay(5000, stoppingToken);

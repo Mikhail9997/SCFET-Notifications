@@ -4,6 +4,7 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 .env
+.txt
 
 WebApi/Backups/*
 !WebApi/Backups/.gitkeep

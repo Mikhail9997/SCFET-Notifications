@@ -23,7 +23,7 @@ public class ScheduledBackupService:BackgroundService
     {
         var backupInterval = backupSettings.IntervalHours;
         var maxBackups = backupSettings.MaxBackups;
-
+    
         while (!stoppingToken.IsCancellationRequested)
         {
             try

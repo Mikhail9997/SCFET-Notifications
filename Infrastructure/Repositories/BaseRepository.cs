@@ -25,6 +25,11 @@ public class BaseRepository<T> : IRepository<T> where T : class
         return await _dbSet.ToListAsync();
     }
 
+    public async Task<int> CountAsync()
+    {
+        return await _dbSet.CountAsync();
+    }
+
     public virtual async Task<T> AddAsync(T entity)
     {
         await _dbSet.AddAsync(entity);

@@ -15,6 +15,10 @@ namespace Infrastructure;
         public DbSet<NotificationReceiver> NotificationReceivers => Set<NotificationReceiver>();
         public DbSet<AvatarPreset> AvatarPresets => Set<AvatarPreset>();
         public DbSet<UserFavoriteNotification> UserFavoriteNotifications => Set<UserFavoriteNotification>();
+        public DbSet<Channel> Channels => Set<Channel>();
+        public DbSet<ChannelInvitation> ChannelInvitations => Set<ChannelInvitation>();
+        public DbSet<ChannelUser> ChannelUsers => Set<ChannelUser>();
+        public DbSet<ChannelMessage> ChannelMessages => Set<ChannelMessage>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -27,5 +31,9 @@ namespace Infrastructure;
             modelBuilder.ApplyConfiguration(new NotificationReplyConfiguration());
             modelBuilder.ApplyConfiguration(new AvatarPresetConfiguration());
             modelBuilder.ApplyConfiguration(new UserFavoriteNotificationConfiguration());
+            modelBuilder.ApplyConfiguration(new ChannelConfiguration());
+            modelBuilder.ApplyConfiguration(new ChannelInvitationConfiguration());
+            modelBuilder.ApplyConfiguration(new ChannelUserConfiguration());
+            modelBuilder.ApplyConfiguration(new ChannelMessageConfiguration());
         }
     }
