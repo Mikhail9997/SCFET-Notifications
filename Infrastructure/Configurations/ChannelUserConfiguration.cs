@@ -29,5 +29,7 @@ public class ChannelUserConfiguration : IEntityTypeConfiguration<ChannelUser>
         // Уникальный индекс для предотвращения дублирования
         builder.HasIndex(cu => new { cu.ChannelId, cu.UserId })
             .IsUnique();
+        
+        builder.HasIndex(cu => new { cu.ChannelId, cu.Role });
     }
 }

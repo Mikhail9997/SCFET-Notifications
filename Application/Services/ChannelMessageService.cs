@@ -184,7 +184,8 @@ public class ChannelMessageService:IChannelMessageService
         var canDelete = await _messageRepository.CanUserModifyMessageAsync(messageId, userId);
         if (!canDelete)
         {
-            throw new InvalidOperationException("У вас нет прав на удаление этого сообщения");
+            var reason = await _messageRepository.GetDeleteDenyReasonAsync(messageId, userId);
+            throw new InvalidOperationException(reason);
         }
 
         var channelId = message.ChannelId;

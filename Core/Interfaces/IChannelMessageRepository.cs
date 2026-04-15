@@ -11,4 +11,5 @@ public interface IChannelMessageRepository : IRepository<ChannelMessage>
     Task MarkAsReadAsync(Guid messageId, Guid userId);
     Task MarkAllAsReadAsync(Guid channelId, Guid userId);
     Task<bool> CanUserModifyMessageAsync(Guid messageId, Guid userId);
+    Task<string> GetDeleteDenyReasonAsync(Guid messageId, Guid userId);
 }

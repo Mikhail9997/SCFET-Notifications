@@ -94,30 +94,92 @@ public class ChannelMessageRepository: BaseRepository<ChannelMessage>, IChannelM
 
     public async Task<bool> CanUserModifyMessageAsync(Guid messageId, Guid userId)
     {
+        // Получаем все необходимые данные одним запросом
+        var messageData = await _context.ChannelMessages
+            .Where(m => m.Id == messageId)
+            .Select(m => new
+            {
+                m.SenderId,
+                m.ChannelId,
+                SenderRole = _context.ChannelUsers
+                    .Where(cu => cu.ChannelId == m.ChannelId && cu.UserId == m.SenderId)
+                    .Select(cu => cu.Role)
+                    .FirstOrDefault(),
+                CurrentUserRole = _context.ChannelUsers
+                    .Where(cu => cu.ChannelId == m.ChannelId && cu.UserId == userId)
+                    .Select(cu => cu.Role)
+                    .FirstOrDefault()
+            })
+            .FirstOrDefaultAsync();
+    
+        if (messageData == null)
+            return false;
+    
+        // Отправитель всегда может удалять своё сообщение
+        if (messageData.SenderId == userId)
+            return true;
+    
+        // Владелец может всё
+        if (messageData.CurrentUserRole == ChannelRole.Owner)
+            return true;
+    
+        // Администратор не может удалять владельца и админов
+        if (messageData.CurrentUserRole == ChannelRole.Admin)
+            return messageData.SenderRole != ChannelRole.Owner && messageData.SenderRole != ChannelRole.Admin;
+    
+        // Модератор может удалять только участников
+        if (messageData.CurrentUserRole == ChannelRole.Moderator)
+            return messageData.SenderRole == ChannelRole.Member;
+    
+        return false;
+    }
+
+    public async Task<string> GetDeleteDenyReasonAsync(Guid messageId, Guid userId)
+    {
         var message = await _context.ChannelMessages
+            .Include(m => m.Sender)
             .Include(m => m.Channel)
             .FirstOrDefaultAsync(m => m.Id == messageId);
         
         if (message == null)
-            return false;
+            return "Сообщение не найдено";
         
-        // Отправитель может редактировать/удалять
+        // Если это своё сообщение - причина не нужна (разрешено)
         if (message.SenderId == userId)
-            return true;
+            return string.Empty;
         
-        // Проверяем роль в канале
-        var channelUser = await _context.ChannelUsers
-            .FirstOrDefaultAsync(cu => cu.ChannelId == message.ChannelId && cu.UserId == userId);
+        var currentUserRole = await _context.ChannelUsers
+            .Where(cu => cu.ChannelId == message.ChannelId && cu.UserId == userId)
+            .Select(cu => cu.Role)
+            .FirstOrDefaultAsync();
         
-        if (channelUser == null)
-            return false;
+        var senderRole = await _context.ChannelUsers
+            .Where(cu => cu.ChannelId == message.ChannelId && cu.UserId == message.SenderId)
+            .Select(cu => cu.Role)
+            .FirstOrDefaultAsync();
         
-        // Владелец, Админ и Модератор могут удалять
-        return channelUser.Role == ChannelRole.Owner || 
-               channelUser.Role == ChannelRole.Admin || 
-               channelUser.Role == ChannelRole.Moderator;
+        var senderName = message.Sender != null 
+            ? $"{message.Sender.LastName} {message.Sender.FirstName}".Trim() 
+            : "Пользователь";
+        
+        return currentUserRole switch
+        {
+            ChannelRole.Admin when senderRole == ChannelRole.Owner => 
+                $"Администратор не может удалять сообщения владельца канала ({senderName})",
+            ChannelRole.Admin when senderRole == ChannelRole.Admin => 
+                $"Администратор не может удалять сообщения других администраторов ({senderName})",
+            ChannelRole.Moderator when senderRole == ChannelRole.Owner => 
+                $"Модератор не может удалять сообщения владельца канала ({senderName})",
+            ChannelRole.Moderator when senderRole == ChannelRole.Admin => 
+                $"Модератор не может удалять сообщения администраторов ({senderName})",
+            ChannelRole.Moderator when senderRole == ChannelRole.Moderator => 
+                $"Модератор не может удалять сообщения других модераторов ({senderName})",
+            ChannelRole.Member => 
+                "Участник может удалять только свои сообщения",
+            _ => "У вас нет прав на удаление этого сообщения"
+        };
     }
-    
+
     private IQueryable<ChannelMessage> ApplyFilters(IQueryable<ChannelMessage> query, MessageFilterDto filter)
     {
         if (!string.IsNullOrWhiteSpace(filter.SearchTerm))

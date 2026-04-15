@@ -42,5 +42,7 @@ public class ChannelMessageConfiguration : IEntityTypeConfiguration<ChannelMessa
         builder.HasIndex(m => m.CreatedAt);
         builder.HasIndex(m => new { m.ChannelId, m.CreatedAt });
         builder.HasIndex(m => new { m.ChannelId, m.IsRead });
+        builder.HasIndex(m => new { m.ChannelId, m.SenderId, m.IsRead });
+        builder.HasIndex(m => new { m.ReplyToMessageId});
     }
 }
