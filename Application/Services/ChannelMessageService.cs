@@ -204,7 +204,14 @@ public class ChannelMessageService:IChannelMessageService
 
     public async Task MarkAsReadAsync(Guid messageId, Guid userId)
     {
+        var message = await _messageRepository.GetByIdAsync(messageId);
+        if (message == null) return;
+    
         await _messageRepository.MarkAsReadAsync(messageId, userId);
+    
+        // Отправляем уведомление через Hub
+        await _hubContext.Clients.Group($"channel_{message.ChannelId}")
+            .SendAsync("MessageRead",  messageId, message.ChannelId);
     }
 
     public async Task MarkAllAsReadAsync(Guid channelId, Guid userId)

@@ -109,6 +109,16 @@ public class ChannelHub:Hub
         }
     }
     
+    public async Task MessageRead(Guid messageId, Guid channelId)
+    {
+        var userId = GetUserId();
+        var user = await _userRepository.GetByIdAsync(userId);
+        var userFullName = user != null ? $"{user.LastName} {user.FirstName}".Trim() : "Пользователь";
+        
+        // Отправляем уведомление всем участникам канала, что сообщение прочитано
+        await Clients.Group($"channel_{channelId}").SendAsync("MessageRead",  messageId, channelId);
+    }
+    
     private Guid GetUserId()
     {
         var userIdClaim = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
