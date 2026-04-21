@@ -4,7 +4,7 @@ namespace Application.DTOs;
 
 public class SendMessageRequestDto
 {
-    public string Content { get; set; } = string.Empty;
+    public string? Content { get; set; } = string.Empty;
     public Guid? ReplyToMessageId { get; set; }
     public IFormFile? Image { get; set; }
 }

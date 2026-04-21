@@ -195,6 +195,34 @@ public class MessagesController : ControllerBase
         }
     }
 
+    [HttpPost("mark-as-read")]
+    public async Task<IActionResult> MarkMessagesAsRead(Guid channelId, [FromBody] MarkMessagesAsReadDto request)
+    {
+        try
+        {
+            var userId = _currentUserService.UserId;
+            if (!userId.HasValue)
+                return Unauthorized(new { success = false, message = "Пользователь не аутентифицирован" });
+    
+            if (request.MessageIds == null || !request.MessageIds.Any())
+                return BadRequest(new { success = false, message = "Не указаны сообщения" });
+    
+            await _messageService.MarkMessagesAsReadAsync(channelId, request.MessageIds, userId.Value);
+            
+            return Ok(new { success = true, message = $"Отмечено прочитанными: {request.MessageIds.Count} сообщений" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to mark messages as read for channel {ChannelId}", channelId);
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error marking messages as read for channel {ChannelId}", channelId);
+            return StatusCode(500, new { success = false, message = "Произошла ошибка" });
+        }
+    }
+    
     [HttpGet("unread-count")]
     public async Task<IActionResult> GetUnreadCount(Guid channelId)
     {

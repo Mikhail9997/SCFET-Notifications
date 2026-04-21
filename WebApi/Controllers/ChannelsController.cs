@@ -281,7 +281,7 @@ public class ChannelsController: ControllerBase
         }
     }
     
-    [HttpGet("{channelId}/members")]
+    [HttpGet("{channelId}/all-members")]
     public async Task<IActionResult> GetChannelMembers(Guid channelId)
     {
         if (!_currentUserService.UserId.HasValue)
@@ -301,6 +301,46 @@ public class ChannelsController: ControllerBase
         }
     }
 
+    [HttpGet("{channelId}/members")]
+    public async Task<IActionResult> GetChannelMembers(Guid channelId, [FromQuery] ChannelMemberFilter filter)
+    {
+        Guid? userId = GetCurrentUserId();
+        if (!userId.HasValue)
+        {
+            return Unauthorized();
+        }
+    
+        try
+        {
+            PagedResult<ChannelMemberDto> pagedMembers = await _channelService
+                .GetChannelMembersPaginatedAsync(channelId, userId.Value, filter);
+        
+            return Ok(new 
+            { 
+                success = true, 
+                data = pagedMembers.Items,
+                pagination = new
+                {
+                    pagedMembers.TotalCount,
+                    pagedMembers.Page,
+                    pagedMembers.PageSize,
+                    pagedMembers.TotalPages
+                },
+                message = "Успех"  
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to get channel members for channel {ChannelId}", channelId);
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting channel members for channel {ChannelId}", channelId);
+            return StatusCode(500, new { success = false, message = "Произошла ошибка при получении участников канала" });
+        }
+    }
+    
     [HttpPut("{channelId}/members/{userId}/role")]
     public async Task<IActionResult> UpdateMemberRole(Guid channelId, Guid userId, [FromBody] UpdateRoleRequest request)
     {

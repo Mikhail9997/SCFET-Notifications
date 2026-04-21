@@ -19,6 +19,7 @@ public interface IChannelMessageService
     Task DeleteMessageAsync(Guid messageId, Guid userId);
     Task MarkAsReadAsync(Guid messageId, Guid userId);
     Task MarkAllAsReadAsync(Guid channelId, Guid userId);
+    Task MarkMessagesAsReadAsync(Guid channelId, List<Guid> messageIds, Guid userId);
     Task<int> GetUnreadCountAsync(Guid channelId, Guid userId);
 }
 
@@ -119,7 +120,7 @@ public class ChannelMessageService:IChannelMessageService
 
         var message = new ChannelMessage
         {
-            Content = dto.Content,
+            Content = dto.Content ?? string.Empty,
             ChannelId = channelId,
             SenderId = senderId,
             ReplyToMessageId = dto.ReplyToMessageId
@@ -217,6 +218,30 @@ public class ChannelMessageService:IChannelMessageService
     public async Task MarkAllAsReadAsync(Guid channelId, Guid userId)
     {
         await _messageRepository.MarkAllAsReadAsync(channelId, userId);
+    }
+
+    public async Task MarkMessagesAsReadAsync(Guid channelId, List<Guid> messageIds, Guid userId)
+    {
+        if (messageIds == null || !messageIds.Any()) return;
+    
+        // Проверяем, является ли пользователь участником канала
+        var isMember = await _channelUserRepository.IsUserInChannelAsync(channelId, userId);
+        if (!isMember)
+        {
+            throw new InvalidOperationException("Вы не являетесь участником этого канала");
+        }
+    
+        // Отмечаем сообщения прочитанными
+        await _messageRepository.MarkMessagesAsReadAsync(channelId, messageIds.ToHashSet(), userId);
+    
+        // Находим последнее сообщение для отправки уведомления
+        var lastMessageId = messageIds.LastOrDefault();
+    
+        if (lastMessageId != Guid.Empty)
+        {
+            await _hubContext.Clients.Group($"channel_{channelId}")
+                .SendAsync("MessageRead", lastMessageId, channelId);
+        }
     }
 
     public async Task<int> GetUnreadCountAsync(Guid channelId, Guid userId)

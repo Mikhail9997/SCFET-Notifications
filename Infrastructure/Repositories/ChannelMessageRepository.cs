@@ -92,6 +92,30 @@ public class ChannelMessageRepository: BaseRepository<ChannelMessage>, IChannelM
         }
     }
 
+    public async Task MarkMessagesAsReadAsync(Guid channelId, HashSet<Guid> messageIds, Guid userId)
+    {
+        if (messageIds == null || !messageIds.Any()) return;
+        
+        // Получаем сообщения, которые нужно отметить
+        var messages = await _context.ChannelMessages
+            .Where(m => m.ChannelId == channelId)
+            .Where(m => messageIds.Contains(m.Id))
+            .Where(m => m.SenderId != userId) // Только чужие сообщения
+            .Where(m => !m.IsRead)
+            .ToListAsync();
+        
+        if (!messages.Any()) return;
+        
+        var now = DateTime.UtcNow;
+        foreach (var message in messages)
+        {
+            message.IsRead = true;
+            message.ReadAt = now;
+        }
+        
+        await _context.SaveChangesAsync();
+    }
+
     public async Task<bool> CanUserModifyMessageAsync(Guid messageId, Guid userId)
     {
         // Получаем все необходимые данные одним запросом

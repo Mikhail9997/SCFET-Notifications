@@ -1,6 +1,7 @@
 ﻿using Application.DTOs;
 using Application.Hubs;
 using AutoMapper;
+using Core.Dtos;
 using Core.Interfaces;
 using Core.Models;
 using Microsoft.AspNetCore.SignalR;
@@ -14,6 +15,7 @@ public interface IChannelService
     Task<PagedResult<ChannelInvitationDto>> GetUserSentInvitationsPaginatedAsync(Guid userId, ChannelFilterEntity filter);
     Task<PagedResult<ChannelDto>> GetAllChannelsPaginatedAsync(ChannelFilterEntity filter, Guid userId);
     Task<List<ChannelMemberDto>> GetChannelMembersAsync(Guid channelId);
+    Task<PagedResult<ChannelMemberDto>> GetChannelMembersPaginatedAsync(Guid channelId, Guid currentUserId, ChannelMemberFilter filter);
     Task<ChannelMemberDto?> GetChannelMemberAsync(Guid channelId, Guid userId);
     Task<ChannelDto?> GetChannelByIdAsync(Guid channelId, Guid userId);
     
@@ -165,6 +167,32 @@ public class ChannelService:IChannelService
             memberDtos.Add(dto);
         }
         return memberDtos;
+    }
+
+    public async Task<PagedResult<ChannelMemberDto>> GetChannelMembersPaginatedAsync(Guid channelId, 
+        Guid currentUserId,
+        ChannelMemberFilter filter)
+    {
+        var pagedMembers = await _channelUserRepository
+            .GetChannelMembersPaginatedAsync(channelId, currentUserId, filter);
+    
+        var memberDtos = new List<ChannelMemberDto>();
+    
+        foreach (ChannelUser m in pagedMembers.Items)
+        {
+            var dto = _mapper.Map<ChannelMemberDto>(m);
+            dto.AvatarUrl = await _avatarService.GetAvatarUrl(m.User.AvatarPresetKey);
+        
+            memberDtos.Add(dto);
+        }
+    
+        return new PagedResult<ChannelMemberDto>
+        {
+            Items = memberDtos,
+            TotalCount = pagedMembers.TotalCount,
+            Page = pagedMembers.Page,
+            PageSize = pagedMembers.PageSize
+        };
     }
 
     public async Task<ChannelMemberDto?> GetChannelMemberAsync(Guid channelId, Guid userId)
