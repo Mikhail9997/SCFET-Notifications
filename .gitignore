@@ -9,12 +9,12 @@ riderModule.iml
 WebApi/Backups/*
 !WebApi/Backups/.gitkeep
 
-WebApi/uploads/Notifications/
-WebApi/uploads/avatars/
-WebApi/uploads/channelMessages/
+WebApi/uploads/Notifications/*
+WebApi/uploads/avatars/*
+WebApi/uploads/channelMessages/*
 
 !WebApi/uploads/Notifications/.gitkeep
 !WebApi/uploads/avatars/.gitkeep
-WebApi/uploads/channelMessages/.gitkeep
+!WebApi/uploads/channelMessages/.gitkeep
 
 Infrastructure/Migrations/*

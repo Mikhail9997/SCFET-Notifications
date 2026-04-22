@@ -232,15 +232,12 @@ public class ChannelMessageService:IChannelMessageService
         }
     
         // Отмечаем сообщения прочитанными
-        await _messageRepository.MarkMessagesAsReadAsync(channelId, messageIds.ToHashSet(), userId);
+        var markedCount = await _messageRepository.MarkMessagesAsReadAsync(channelId, messageIds.ToHashSet(), userId);
     
-        // Находим последнее сообщение для отправки уведомления
-        var lastMessageId = messageIds.LastOrDefault();
-    
-        if (lastMessageId != Guid.Empty)
+        if (markedCount > 0)
         {
             await _hubContext.Clients.Group($"channel_{channelId}")
-                .SendAsync("MessageRead", lastMessageId, channelId);
+                .SendAsync("MessagesRead", messageIds, channelId);
         }
     }
 

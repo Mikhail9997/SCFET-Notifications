@@ -92,28 +92,22 @@ public class ChannelMessageRepository: BaseRepository<ChannelMessage>, IChannelM
         }
     }
 
-    public async Task MarkMessagesAsReadAsync(Guid channelId, HashSet<Guid> messageIds, Guid userId)
+    public async Task<int> MarkMessagesAsReadAsync(Guid channelId, HashSet<Guid> messageIds, Guid userId)
     {
-        if (messageIds == null || !messageIds.Any()) return;
+        if (messageIds == null || !messageIds.Any()) return 0;
+    
+        var now = DateTime.UtcNow;
         
-        // Получаем сообщения, которые нужно отметить
-        var messages = await _context.ChannelMessages
+        var updatedCount = await _context.ChannelMessages
             .Where(m => m.ChannelId == channelId)
             .Where(m => messageIds.Contains(m.Id))
-            .Where(m => m.SenderId != userId) // Только чужие сообщения
+            .Where(m => m.SenderId != userId)
             .Where(m => !m.IsRead)
-            .ToListAsync();
-        
-        if (!messages.Any()) return;
-        
-        var now = DateTime.UtcNow;
-        foreach (var message in messages)
-        {
-            message.IsRead = true;
-            message.ReadAt = now;
-        }
-        
-        await _context.SaveChangesAsync();
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(m => m.IsRead, true)
+                .SetProperty(m => m.ReadAt, now));
+    
+        return updatedCount;
     }
 
     public async Task<bool> CanUserModifyMessageAsync(Guid messageId, Guid userId)
@@ -147,11 +141,11 @@ public class ChannelMessageRepository: BaseRepository<ChannelMessage>, IChannelM
         if (messageData.CurrentUserRole == ChannelRole.Owner)
             return true;
     
-        // Администратор не может удалять владельца и админов
+        // Администратор не может удалять сообщения владельца и админов
         if (messageData.CurrentUserRole == ChannelRole.Admin)
             return messageData.SenderRole != ChannelRole.Owner && messageData.SenderRole != ChannelRole.Admin;
     
-        // Модератор может удалять только участников
+        // Модератор может удалять только сообщения участников
         if (messageData.CurrentUserRole == ChannelRole.Moderator)
             return messageData.SenderRole == ChannelRole.Member;
     
