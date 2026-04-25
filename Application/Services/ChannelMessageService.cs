@@ -191,6 +191,9 @@ public class ChannelMessageService:IChannelMessageService
 
         var channelId = message.ChannelId;
         
+        // Очищаем ссылки на удаляемое сообщение у всех ответов
+        await _messageRepository.ClearReplyReferencesAsync(messageId);
+        
         // Удаляем изображение если есть
         if (!string.IsNullOrEmpty(message.ImageUrl))
         {

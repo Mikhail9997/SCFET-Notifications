@@ -92,6 +92,20 @@ public class ChannelMessageRepository: BaseRepository<ChannelMessage>, IChannelM
         }
     }
 
+    public async Task ClearReplyReferencesAsync(Guid messageId)
+    {
+        var replies = await _context.ChannelMessages
+            .Where(m => m.ReplyToMessageId == messageId)
+            .ToListAsync();
+    
+        foreach (var reply in replies)
+        {
+            reply.ReplyToMessageId = null;
+        }
+    
+        await _context.SaveChangesAsync();
+    }
+
     public async Task<int> MarkMessagesAsReadAsync(Guid channelId, HashSet<Guid> messageIds, Guid userId)
     {
         if (messageIds == null || !messageIds.Any()) return 0;

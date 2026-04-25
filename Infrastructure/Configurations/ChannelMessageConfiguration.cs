@@ -35,7 +35,8 @@ public class ChannelMessageConfiguration : IEntityTypeConfiguration<ChannelMessa
         builder.HasOne(m => m.ReplyToMessage)
             .WithMany(m => m.Replies)
             .HasForeignKey(m => m.ReplyToMessageId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
         
         builder.HasIndex(m => m.ChannelId);
         builder.HasIndex(m => m.SenderId);

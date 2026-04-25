@@ -15,7 +15,7 @@ public class FileService
     public async Task<string> SaveImageAsync(IFormFile image, string uploadsFolder)
     {
         // Проверяем тип файла
-        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif"};
         var extension = Path.GetExtension(image.FileName).ToLowerInvariant();
         
         if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
