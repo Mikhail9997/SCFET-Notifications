@@ -1,4 +1,6 @@
 ﻿using Core.Dtos;
+using Core.Dtos.Channel;
+using Core.Dtos.Filters;
 using Core.Models;
 
 namespace Core.Interfaces;
@@ -13,4 +15,5 @@ public interface IChannelUserRepository : IRepository<ChannelUser>
     Task<ChannelRole?> GetUserRoleInChannelAsync(Guid channelId, Guid userId);
     Task<List<Channel>> GetUserChannelsWithDetailsAsync(Guid userId);
     Task<int> GetChannelMembersCountAsync(Guid channelId);
+    Task<List<ChannelUserRoleDto>> GetUsersRolesInChannelAsync(Guid channelId, IEnumerable<Guid> userIds);
 }

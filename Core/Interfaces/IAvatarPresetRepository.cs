@@ -6,6 +6,7 @@ public interface IAvatarPresetRepository:IRepository<AvatarPreset>
 {
     Task<bool> Exist(string presetKey);
     Task<AvatarPreset?> GetByKey(string presetKey);
+    Task<List<AvatarPreset>> GetByKeysAsync(IEnumerable<string> presetKeys);
     Task<bool> Exists(string presetKey);
     Task RemoveByKey(string presetKey);
     Task<IReadOnlyList<AvatarPreset>> GetAllByCategory(string category);

@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using Core.Dtos;
+using Core.Dtos.Filters;
 using Core.Models;
 
 namespace Core.Interfaces;
@@ -15,6 +16,6 @@ public interface IUserRepository : IRepository<User>
     Task<bool> IsTelegramIdUniqueAsync(string token);
     Task<PagedResult<User>> GetAvailableUsersForChannelAsync(
         Guid channelId, 
-        Guid currentUserId,
-        AvailableUsersFilterDto filter);
+        Guid currentUserId, AvailableUsersFilterDto filter);
+    Task<List<User>> GetByIdsAsync(IEnumerable<Guid> userIds);
 }

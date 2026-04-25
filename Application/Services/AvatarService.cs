@@ -10,6 +10,7 @@ public interface IAvatarService
 {
      Task UpdateAvatarPresetAsync(Guid userId, string presetKey);
      Task<string> GetAvatarUrl(string? avatarPresetKey);
+     Task<Dictionary<string, string>> GetAvatarUrlsAsync(IEnumerable<string> presetKeys);
      Task<List<AvatarPresetDto>> GetAllPresetsAsync();
      Task UploadCustomPresetAsync(Guid userId, CreateCustomPresetDto dto);
      Task RemoveCustomAvatarAsync(string presetKey);
@@ -64,6 +65,35 @@ public class AvatarService:IAvatarService
         var extension = Path.GetExtension(preset?.FileName) ?? ".png";
         // Формируем URL к статическому файлу
         return $"{_configuration["BaseUrl"]}/uploads/avatars/presets/{preset?.Category}/{avatarPresetKey}{extension.ToLowerInvariant()}";
+    }
+
+    public async Task<Dictionary<string, string>> GetAvatarUrlsAsync(IEnumerable<string> presetKeys)
+    {
+        var result = new Dictionary<string, string>();
+        var keys = presetKeys.Where(k => !string.IsNullOrEmpty(k)).Distinct().ToList();
+        
+        if (!keys.Any())
+            return result;
+
+        // Загружаем все пресеты одним запросом
+        var presets = await _presetRepository.GetByKeysAsync(keys);
+        var presetDict = presets.ToDictionary(p => p.PresetKey, p => p);
+
+        foreach (var key in keys)
+        {
+            if (presetDict.TryGetValue(key, out var preset))
+            {
+                var extension = Path.GetExtension(preset.FileName) ?? ".png";
+                result[key] = $"{_configuration["BaseUrl"]}/uploads/avatars/presets/{preset.Category}/{key}{extension.ToLowerInvariant()}";
+            }
+            else
+            {
+                // Fallback если пресет не найден
+                result[key] = $"{_configuration["BaseUrl"]}/uploads/avatars/presets/default/default.jpg";
+            }
+        }
+
+        return result;
     }
 
     public async Task<List<AvatarPresetDto>> GetAllPresetsAsync()

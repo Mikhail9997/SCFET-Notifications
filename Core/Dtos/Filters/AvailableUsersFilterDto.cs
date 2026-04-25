@@ -1,6 +1,6 @@
 ﻿using Core.Models;
 
-namespace Core.Dtos;
+namespace Core.Dtos.Filters;
 
 public class AvailableUsersFilterDto : FilterEntity
 {

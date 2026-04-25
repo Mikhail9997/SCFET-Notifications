@@ -1,4 +1,6 @@
 ﻿using Core.Dtos;
+using Core.Dtos.Channel;
+using Core.Dtos.Filters;
 using Core.Interfaces;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
@@ -90,20 +92,6 @@ public class ChannelMessageRepository: BaseRepository<ChannelMessage>, IChannelM
                 await UpdateAsync(message);
             }
         }
-    }
-
-    public async Task ClearReplyReferencesAsync(Guid messageId)
-    {
-        var replies = await _context.ChannelMessages
-            .Where(m => m.ReplyToMessageId == messageId)
-            .ToListAsync();
-    
-        foreach (var reply in replies)
-        {
-            reply.ReplyToMessageId = null;
-        }
-    
-        await _context.SaveChangesAsync();
     }
 
     public async Task<int> MarkMessagesAsReadAsync(Guid channelId, HashSet<Guid> messageIds, Guid userId)
@@ -209,6 +197,60 @@ public class ChannelMessageRepository: BaseRepository<ChannelMessage>, IChannelM
             ChannelRole.Member => 
                 "Участник может удалять только свои сообщения",
             _ => "У вас нет прав на удаление этого сообщения"
+        };
+    }
+
+    public async Task<List<MessageModifyRightDto>> GetModifyRightsAsync(
+        Guid channelId, IEnumerable<Guid> messageIds, Guid currentUserId)
+    {
+        var messageIdsSet = messageIds.ToHashSet();
+        
+        if (!messageIdsSet.Any())
+            return new List<MessageModifyRightDto>();
+
+        // Получаем роль текущего пользователя
+        var currentUserRole = await _context.ChannelUsers
+            .Where(cu => cu.ChannelId == channelId && cu.UserId == currentUserId)
+            .Select(cu => (ChannelRole?)cu.Role)
+            .FirstOrDefaultAsync();
+
+        // Получаем сообщения с ролями отправителей
+        var messages = await _context.ChannelMessages
+            .Where(m => m.ChannelId == channelId && messageIdsSet.Contains(m.Id))
+            .Select(m => new
+            {
+                m.Id,
+                m.SenderId,
+                SenderRole = _context.ChannelUsers
+                    .Where(cu => cu.ChannelId == channelId && cu.UserId == m.SenderId)
+                    .Select(cu => (ChannelRole?)cu.Role)
+                    .FirstOrDefault()
+            })
+            .ToListAsync();
+
+        return messages.Select(m => new MessageModifyRightDto
+        {
+            MessageId = m.Id,
+            CanDelete = CanDeleteMessage(currentUserRole, m.SenderId, currentUserId, m.SenderRole)
+        }).ToList();
+    }
+    
+    private bool CanDeleteMessage(ChannelRole? currentUserRole, Guid senderId, Guid currentUserId, ChannelRole? senderRole)
+    {
+        // Отправитель всегда может удалять своё сообщение
+        if (senderId == currentUserId)
+            return true;
+
+        // Владелец может всё
+        if (currentUserRole == ChannelRole.Owner)
+            return true;
+
+        // Проверяем права по ролям
+        return currentUserRole switch
+        {
+            ChannelRole.Admin => senderRole != ChannelRole.Owner && senderRole != ChannelRole.Admin,
+            ChannelRole.Moderator => senderRole == ChannelRole.Member,
+            _ => false
         };
     }
 

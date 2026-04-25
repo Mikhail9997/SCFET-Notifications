@@ -21,6 +21,18 @@ public class AvatarPresetRepository:BaseRepository<AvatarPreset>, IAvatarPresetR
             .FirstOrDefaultAsync(p => p.PresetKey == presetKey);
     }
 
+    public async Task<List<AvatarPreset>> GetByKeysAsync(IEnumerable<string> presetKeys)
+    {
+        var keys = presetKeys.ToHashSet();
+        
+        if (!keys.Any())
+            return new List<AvatarPreset>();
+
+        return await _context.AvatarPresets
+            .Where(p => keys.Contains(p.PresetKey))
+            .ToListAsync();
+    }
+
     public async Task<bool> Exists(string presetKey)
     {
         return await _context.AvatarPresets

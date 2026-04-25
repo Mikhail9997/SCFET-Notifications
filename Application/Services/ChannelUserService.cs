@@ -1,6 +1,7 @@
 ﻿using Application.DTOs;
 using AutoMapper;
 using Core.Dtos;
+using Core.Dtos.Filters;
 using Core.Interfaces;
 using Core.Models;
 

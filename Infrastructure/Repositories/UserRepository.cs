@@ -1,4 +1,5 @@
 ﻿using Core.Dtos;
+using Core.Dtos.Filters;
 using Core.Interfaces;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
@@ -178,6 +179,18 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             Page = filter.Page,
             PageSize = filter.PageSize
         };
+    }
+
+    public async Task<List<User>> GetByIdsAsync(IEnumerable<Guid> userIds)
+    {
+        var userIdsSet = userIds.ToHashSet();
+        
+        if (!userIdsSet.Any())
+            return new List<User>();
+
+        return await _context.Users
+            .Where(u => userIdsSet.Contains(u.Id))
+            .ToListAsync();
     }
 
     private IQueryable<User> ApplyAvailableUsersFilters(IQueryable<User> query, AvailableUsersFilterDto filter)

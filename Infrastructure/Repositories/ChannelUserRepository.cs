@@ -1,4 +1,6 @@
 ﻿using Core.Dtos;
+using Core.Dtos.Channel;
+using Core.Dtos.Filters;
 using Core.Interfaces;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
@@ -136,6 +138,24 @@ public class ChannelUserRepository : BaseRepository<ChannelUser>, IChannelUserRe
         return await _context.ChannelUsers
             .Where(cu => cu.ChannelId == channelId)
             .CountAsync();
+    }
+
+    public async Task<List<ChannelUserRoleDto>> GetUsersRolesInChannelAsync(
+        Guid channelId, IEnumerable<Guid> userIds)
+    {
+        var userIdsSet = userIds.ToHashSet();
+        
+        if (!userIdsSet.Any())
+            return new List<ChannelUserRoleDto>();
+
+        return await _context.ChannelUsers
+            .Where(cu => cu.ChannelId == channelId && userIdsSet.Contains(cu.UserId))
+            .Select(cu => new ChannelUserRoleDto
+            {
+                UserId = cu.UserId,
+                Role = cu.Role
+            })
+            .ToListAsync();
     }
 
     public override async Task<ChannelUser?> GetByIdAsync(Guid id)

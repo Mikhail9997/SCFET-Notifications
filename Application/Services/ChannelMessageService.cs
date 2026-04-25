@@ -2,6 +2,7 @@
 using Application.Hubs;
 using AutoMapper;
 using Core.Dtos;
+using Core.Dtos.Filters;
 using Core.Interfaces;
 using Core.Models;
 using Microsoft.AspNetCore.Hosting;
@@ -23,13 +24,13 @@ public interface IChannelMessageService
     Task<int> GetUnreadCountAsync(Guid channelId, Guid userId);
 }
 
-public class ChannelMessageService:IChannelMessageService
+public class ChannelMessageService : IChannelMessageService
 {
     private readonly IChannelMessageRepository _messageRepository;
     private readonly IChannelRepository _channelRepository;
     private readonly IChannelUserRepository _channelUserRepository;
     private readonly FileService _fileService;
-    private readonly IAvatarService _avatarService;
+    private readonly IMessageMappingService _mappingService;
     private readonly IWebHostEnvironment _environment;
     private readonly IMapper _mapper;
     private readonly IHubContext<ChannelHub> _hubContext;
@@ -41,7 +42,7 @@ public class ChannelMessageService:IChannelMessageService
         IChannelRepository channelRepository,
         IChannelUserRepository channelUserRepository,
         FileService fileService,
-        IAvatarService avatarService,
+        IMessageMappingService mappingService,
         IWebHostEnvironment environment,
         IMapper mapper,
         IHubContext<ChannelHub> hubContext,
@@ -51,7 +52,7 @@ public class ChannelMessageService:IChannelMessageService
         _channelRepository = channelRepository;
         _channelUserRepository = channelUserRepository;
         _fileService = fileService;
-        _avatarService = avatarService;
+        _mappingService = mappingService;
         _environment = environment;
         _mapper = mapper;
         _hubContext = hubContext;
@@ -64,7 +65,6 @@ public class ChannelMessageService:IChannelMessageService
         }
     }
 
-
     public async Task<PagedResult<ChannelMessageDto>> GetChannelMessagesAsync(
         Guid channelId, Guid userId, MessageFilterDto filter)
     {
@@ -74,26 +74,9 @@ public class ChannelMessageService:IChannelMessageService
             throw new InvalidOperationException("Вы не являетесь участником этого канала");
         }
 
-        var pagedMessages = await _messageRepository
-            .GetChannelMessagesAsync(channelId, filter);
-        
-        var messageDtos = new List<ChannelMessageDto>();
-        
-        foreach (var message in pagedMessages.Items)
-        {
-            var dto = await MapToDtoAsync(message, userId);
-            messageDtos.Add(dto);
-        }
-
-        return new PagedResult<ChannelMessageDto>
-        {
-            Items = messageDtos,
-            TotalCount = pagedMessages.TotalCount,
-            Page = pagedMessages.Page,
-            PageSize = pagedMessages.PageSize
-        };
+        var pagedMessages = await _messageRepository.GetChannelMessagesAsync(channelId, filter);
+        return await _mappingService.MapToPagedDtoAsync(pagedMessages, channelId, userId);
     }
-
 
     public async Task<ChannelMessageDto> SendMessageAsync(Guid channelId, Guid senderId, SendMessageDto dto)
     {
@@ -126,7 +109,6 @@ public class ChannelMessageService:IChannelMessageService
             ReplyToMessageId = dto.ReplyToMessageId
         };
 
-        // Сохраняем изображение если есть 
         if (dto.Image != null)
         {
             string imagePath = await _fileService.SaveImageAsync(dto.Image, _uploadsFolder);
@@ -134,10 +116,9 @@ public class ChannelMessageService:IChannelMessageService
         }
 
         await _messageRepository.AddAsync(message);
-
         message = await _messageRepository.GetMessageWithDetailsAsync(message.Id);
         
-        var dtoResult = await MapToDtoAsync(message!, senderId);
+        var dtoResult = await _mappingService.MapToDtoAsync(message!, channelId, senderId);
 
         await _hubContext.Clients.Group($"channel_{channelId}")
             .SendAsync("NewMessage", dtoResult);
@@ -165,7 +146,7 @@ public class ChannelMessageService:IChannelMessageService
 
         await _messageRepository.UpdateAsync(message);
         
-        var dtoResult = await MapToDtoAsync(message, userId);
+        var dtoResult = await _mappingService.MapToDtoAsync(message, message.ChannelId, userId);
 
         await _hubContext.Clients.Group($"channel_{message.ChannelId}")
             .SendAsync("MessageUpdated", dtoResult);
@@ -191,10 +172,6 @@ public class ChannelMessageService:IChannelMessageService
 
         var channelId = message.ChannelId;
         
-        // Очищаем ссылки на удаляемое сообщение у всех ответов
-        await _messageRepository.ClearReplyReferencesAsync(messageId);
-        
-        // Удаляем изображение если есть
         if (!string.IsNullOrEmpty(message.ImageUrl))
         {
             await _fileService.DeleteImageAsync(message.ImageUrl, _uploadsFolder);
@@ -213,9 +190,8 @@ public class ChannelMessageService:IChannelMessageService
     
         await _messageRepository.MarkAsReadAsync(messageId, userId);
     
-        // Отправляем уведомление через Hub
         await _hubContext.Clients.Group($"channel_{message.ChannelId}")
-            .SendAsync("MessageRead",  messageId, message.ChannelId);
+            .SendAsync("MessageRead", messageId, message.ChannelId);
     }
 
     public async Task MarkAllAsReadAsync(Guid channelId, Guid userId)
@@ -227,15 +203,14 @@ public class ChannelMessageService:IChannelMessageService
     {
         if (messageIds == null || !messageIds.Any()) return;
     
-        // Проверяем, является ли пользователь участником канала
         var isMember = await _channelUserRepository.IsUserInChannelAsync(channelId, userId);
         if (!isMember)
         {
             throw new InvalidOperationException("Вы не являетесь участником этого канала");
         }
     
-        // Отмечаем сообщения прочитанными
-        var markedCount = await _messageRepository.MarkMessagesAsReadAsync(channelId, messageIds.ToHashSet(), userId);
+        var markedCount = await _messageRepository.MarkMessagesAsReadAsync(
+            channelId, messageIds.ToHashSet(), userId);
     
         if (markedCount > 0)
         {
@@ -247,36 +222,5 @@ public class ChannelMessageService:IChannelMessageService
     public async Task<int> GetUnreadCountAsync(Guid channelId, Guid userId)
     {
         return await _messageRepository.GetUnreadCountAsync(channelId, userId);
-    }
-    
-   private async Task<ChannelMessageDto> MapToDtoAsync(
-        ChannelMessage message, 
-        Guid currentUserId)
-    {
-        var dto = _mapper.Map<ChannelMessageDto>(message);
-        
-        dto.SenderName = $"{message.Sender.LastName} {message.Sender.FirstName}".Trim();
-        dto.SenderAvatar = await _avatarService.GetAvatarUrl(message.Sender.AvatarPresetKey);
-        dto.SenderRole = message.Sender.Role;
-        dto.SenderChannelRole = await _channelUserRepository.GetUserRoleInChannelAsync(message.ChannelId, message.SenderId);
-        
-        dto.CanEdit = message.SenderId == currentUserId;
-        dto.CanDelete = await _messageRepository.CanUserModifyMessageAsync(message.Id, currentUserId);
-
-        if (message.ReplyToMessage != null)
-        {
-            dto.ReplyToMessage = new ReplyMessageDto
-            {
-                Id = message.ReplyToMessage.Id,
-                Content = message.ReplyToMessage.Content,
-                SenderId = message.ReplyToMessage.SenderId,
-                SenderName = $"{message.ReplyToMessage.Sender.LastName} {message.ReplyToMessage.Sender.FirstName}".Trim(),
-                SenderAvatar = await _avatarService.GetAvatarUrl(message.ReplyToMessage.Sender.AvatarPresetKey),
-                ImageUrl = message.ReplyToMessage.ImageUrl,
-                CreatedAt = message.ReplyToMessage.CreatedAt
-            };
-        }
-
-        return dto;
     }
 }

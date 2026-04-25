@@ -4,6 +4,7 @@ using Application.Common.Interfaces;
 using Application.DTOs;
 using Application.Services;
 using Core.Dtos;
+using Core.Dtos.Filters;
 using Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

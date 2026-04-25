@@ -198,6 +198,7 @@ builder.Services.AddScoped<FileService>();
 builder.Services.AddSingleton<RedisService>();
 builder.Services.AddScoped<IDatabaseBackupService, DockerBackupUniversalService>();
 builder.Services.AddScoped<IAvatarService, AvatarService>();
+builder.Services.AddScoped<IMessageMappingService, MessageMappingService>();
 
 // Background Services
 builder.Services.AddHostedService<KafkaConsumerService>();

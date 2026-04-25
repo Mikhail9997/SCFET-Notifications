@@ -2,6 +2,7 @@
 using Application.Hubs;
 using AutoMapper;
 using Core.Dtos;
+using Core.Dtos.Filters;
 using Core.Interfaces;
 using Core.Models;
 using Microsoft.AspNetCore.SignalR;
