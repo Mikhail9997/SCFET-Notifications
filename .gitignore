@@ -5,6 +5,7 @@ riderModule.iml
 /_ReSharper.Caches/
 .env
 .txt
+памятка системы каналов.txt
 
 WebApi/Backups/*
 !WebApi/Backups/.gitkeep
